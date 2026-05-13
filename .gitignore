@@ -1,0 +1,27 @@
+# Flutter build
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+backend/postcard.db
+
+# Generated Flutter web deploy
+backend/static/app/
+
+# User uploaded images
+backend/static/cards/
+
+# OS
+.DS_Store
+Thumbs.db

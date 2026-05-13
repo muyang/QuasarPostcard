@@ -1,0 +1,75 @@
+import 'package:flutter/material.dart';
+import 'services/api_service.dart';
+import 'screens/login_screen.dart';
+import 'screens/postcard_list_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiService.init();
+  runApp(const CardDesignerApp());
+}
+
+class CardDesignerApp extends StatelessWidget {
+  const CardDesignerApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: '明信片设计器',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF7C4DFF),
+          secondary: Color(0xFFB794FF),
+          surface: Color(0xFF1A1A2E),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A1A2E),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardTheme: const CardThemeData(
+          color: Color(0xFF1E1E2E),
+          elevation: 2,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF2A2A4A),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF444444)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF444444)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF7C4DFF)),
+          ),
+          labelStyle: const TextStyle(color: Color(0xFF888888)),
+        ),
+      ),
+      home: const AuthGate(),
+    );
+  }
+}
+
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  @override
+  Widget build(BuildContext context) {
+    if (ApiService.isAuthenticated) {
+      return const PostcardListScreen();
+    }
+    return const LoginScreen();
+  }
+}

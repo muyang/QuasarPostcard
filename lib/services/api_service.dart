@@ -1,0 +1,186 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class LoginResult {
+  final String? token;
+  final String? error;
+  const LoginResult({this.token, this.error});
+  bool get success => token != null;
+}
+
+class ApiService {
+  static String _baseUrl = 'http://127.0.0.1:8100';
+  static String _token = '';
+
+  static String get baseUrl => _baseUrl;
+  static bool get isAuthenticated => _token.isNotEmpty;
+
+  static Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    _baseUrl = prefs.getString('postcard_server_url') ?? 'http://127.0.0.1:8100';
+    _token = prefs.getString('postcard_token') ?? '';
+  }
+
+  static Future<void> saveConfig(String serverUrl, String token) async {
+    _baseUrl = serverUrl;
+    _token = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('postcard_server_url', serverUrl);
+    await prefs.setString('postcard_token', token);
+  }
+
+  static Map<String, String> get _headers => {
+        'Content-Type': 'application/json',
+        if (_token.isNotEmpty) 'Authorization': 'Bearer $_token',
+      };
+
+  static String imageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    return '$_baseUrl$path';
+  }
+
+  // ========== Auth ==========
+
+  static Future<LoginResult> login(String username, String password) async {
+    try {
+      final resp = await http.post(
+        Uri.parse('$_baseUrl/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      ).timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        if (data['success'] == true) {
+          final token = data['token'] as String?;
+          if (token != null && token.isNotEmpty) {
+            return LoginResult(token: token);
+          }
+        }
+      }
+      return LoginResult(error: '用户名或密码错误');
+    } catch (e) {
+      return LoginResult(error: '无法连接服务器，请检查地址和网络');
+    }
+  }
+
+  // ========== Postcards ==========
+
+  static Future<Map<String, dynamic>> getPostcards({
+    int skip = 0,
+    int limit = 50,
+    String? status,
+  }) async {
+    final params = <String, String>{
+      'skip': skip.toString(),
+      'limit': limit.toString(),
+    };
+    if (status != null && status.isNotEmpty) params['status'] = status;
+
+    final uri = Uri.parse('$_baseUrl/api/postcards').replace(queryParameters: params);
+    final resp = await http.get(uri, headers: _headers);
+    if (resp.statusCode == 200) {
+      return jsonDecode(resp.body);
+    }
+    throw Exception('Failed: ${resp.statusCode}');
+  }
+
+  static Future<Map<String, dynamic>> createPostcard(Map<String, dynamic> body) async {
+    final resp = await http.post(
+      Uri.parse('$_baseUrl/api/postcards'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (resp.statusCode == 200) {
+      return jsonDecode(resp.body);
+    }
+    throw Exception('Failed: ${resp.statusCode} ${resp.body}');
+  }
+
+  static Future<Map<String, dynamic>> updatePostcard(int id, Map<String, dynamic> body) async {
+    final resp = await http.put(
+      Uri.parse('$_baseUrl/api/postcards/$id'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (resp.statusCode == 200) {
+      return jsonDecode(resp.body);
+    }
+    throw Exception('Failed: ${resp.statusCode} ${resp.body}');
+  }
+
+  static Future<void> deletePostcard(int id) async {
+    final resp = await http.delete(
+      Uri.parse('$_baseUrl/api/postcards/$id'),
+      headers: _headers,
+    );
+    if (resp.statusCode != 200) {
+      throw Exception('Failed: ${resp.statusCode}');
+    }
+  }
+
+  // ========== Materials ==========
+
+  static Future<List<Map<String, dynamic>>> getTemplates({Map<String, String>? queryParams}) async {
+    final defaults = {'status': 'published_free,published_member', 'limit': '1000'};
+    final uri = Uri.parse('$_baseUrl/api/materials/templates').replace(queryParameters: queryParams ?? defaults);
+    final resp = await http.get(uri, headers: _headers);
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      if (data is Map && data.containsKey('items')) {
+        return List<Map<String, dynamic>>.from(data['items']);
+      }
+      return List<Map<String, dynamic>>.from(data);
+    }
+    throw Exception('Failed: ${resp.statusCode}');
+  }
+
+  static Future<List<Map<String, dynamic>>> getStamps({Map<String, String>? queryParams}) async {
+    final defaults = {'status': 'published_free,published_member', 'limit': '1000'};
+    final uri = Uri.parse('$_baseUrl/api/materials/stamps').replace(queryParameters: queryParams ?? defaults);
+    final resp = await http.get(uri, headers: _headers);
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      if (data is Map && data.containsKey('items')) {
+        return List<Map<String, dynamic>>.from(data['items']);
+      }
+      return List<Map<String, dynamic>>.from(data);
+    }
+    throw Exception('Failed: ${resp.statusCode}');
+  }
+
+  static Future<List<Map<String, dynamic>>> getPostmarks({Map<String, String>? queryParams}) async {
+    final defaults = {'status': 'published_free,published_member', 'limit': '1000'};
+    final uri = Uri.parse('$_baseUrl/api/materials/postmarks').replace(queryParameters: queryParams ?? defaults);
+    final resp = await http.get(uri, headers: _headers);
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      if (data is Map && data.containsKey('items')) {
+        return List<Map<String, dynamic>>.from(data['items']);
+      }
+      return List<Map<String, dynamic>>.from(data);
+    }
+    throw Exception('Failed: ${resp.statusCode}');
+  }
+
+  // ========== Image Upload ==========
+
+  static Future<String> uploadImage(String filePath) async {
+    final uri = Uri.parse('$_baseUrl/api/upload/image');
+    final request = http.MultipartRequest('POST', uri);
+    if (_token.isNotEmpty) request.headers['Authorization'] = 'Bearer $_token';
+    request.files.add(await http.MultipartFile.fromPath('file', filePath));
+
+    final streamedResp = await request.send();
+    final resp = await http.Response.fromStream(streamedResp);
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      if (data['success'] == true) {
+        return data['url'] ?? '';
+      }
+      throw Exception(data['detail'] ?? 'Upload failed');
+    }
+    throw Exception('Upload failed: ${resp.statusCode}');
+  }
+}
