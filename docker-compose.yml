@@ -1,0 +1,10 @@
+services:
+  postcard:
+    build: .
+    container_name: card-designer
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./data:/app/data          # SQLite database persistence
+      - ./backend/static/cards:/app/static/cards  # Uploaded images persistence
+    restart: unless-stopped

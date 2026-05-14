@@ -39,7 +39,8 @@ class PostcardCanvas extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(template.cornerRadius),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 16, offset: const Offset(0, 6)),
+                BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 8)),
+                BoxShadow(color: design.themeColor.withOpacity(0.08), blurRadius: 40, offset: const Offset(0, 0)),
               ],
             ),
             child: ClipRRect(
@@ -73,7 +74,7 @@ class PostcardCanvas extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(template.cornerRadius - 2),
-                          border: Border.all(color: design.themeColor.withOpacity(0.5), width: 1.5),
+                          border: Border.all(color: design.themeColor.withOpacity(0.35), width: 1),
                         ),
                       ),
                     ),

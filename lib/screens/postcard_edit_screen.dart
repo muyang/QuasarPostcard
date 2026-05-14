@@ -1,10 +1,9 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import '../models/postcard.dart';
 import '../services/api_service.dart';
 import '../widgets/postcard_canvas.dart';
 import '../widgets/editor_step_panel.dart';
+import '../widgets/share_sheet.dart';
 import '../utils/download_helper.dart';
 
 class PostcardEditScreen extends StatefulWidget {
@@ -44,9 +43,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
           postmarks: postmarks.map((j) => PostcardPostmark.fromJson(j)).toList(),
         );
       });
-    } catch (_) {
-      // Use hardcoded defaults
-    }
+    } catch (_) {}
   }
 
   Future<void> _save() async {
@@ -81,7 +78,6 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
 
   void _onStepChanged(EditorStep step) {
     setState(() { _step = step; });
-    // Trigger stamp animation when entering stamp step
     if (step == EditorStep.stamp && _design.stampId != null) {
       _stampAnimating = false;
       Future.delayed(const Duration(milliseconds: 100), () {
@@ -93,14 +89,9 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
   Future<void> _download() async {
     setState(() => _downloading = true);
     try {
-      final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return;
-      // Delay briefly to ensure layout is complete
-      await Future.delayed(const Duration(milliseconds: 100));
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null || !mounted) return;
-      await downloadBytes(byteData.buffer.asUint8List(), 'postcard_${DateTime.now().millisecondsSinceEpoch}.png');
+      final bytes = await ShareSheet.capture(_repaintKey);
+      if (bytes == null || !mounted) return;
+      await downloadBytes(bytes, 'postcard_${DateTime.now().millisecondsSinceEpoch}.png');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下载完成'), backgroundColor: Color(0xFF4CAF50)));
     } catch (e) {
@@ -122,7 +113,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.send_rounded, size: 64, color: const Color(0xFF7C4DFF).withOpacity(0.6)),
                   const SizedBox(height: 16),
-                  const Text('明信片已寄出 ✈️', style: TextStyle(fontSize: 18, color: Colors.white70)),
+                  const Text('明信片已寄出', style: TextStyle(fontSize: 18, color: Colors.white70)),
                 ]),
               ),
             )
@@ -139,25 +130,35 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
 
   Future<void> _onSend() async {
     setState(() => _sending = true);
-    await Future.delayed(const Duration(milliseconds: 2000));
+    await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
+
+    // Capture the postcard image before saving
+    final bytes = await ShareSheet.capture(_repaintKey);
     await _save();
+
+    if (!mounted) return;
     setState(() => _sending = false);
+
+    if (bytes != null) {
+      ShareSheet.show(context, bytes, 'postcard_${DateTime.now().millisecondsSinceEpoch}.png');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0D0D1A),
       appBar: AppBar(
-        title: const Text('明信片设计器'),
+        backgroundColor: const Color(0xFF0D0D1A),
+        title: const Text('明信片设计器', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
         actions: [
-          IconButton(icon: _downloading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.download_rounded), tooltip: '下载明信片', onPressed: _downloading ? null : _download),
-          const SizedBox(width: 4),
+          IconButton(icon: _downloading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)) : const Icon(Icons.download_rounded, color: Colors.white70), tooltip: '下载', onPressed: _downloading ? null : _download),
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('保存', style: TextStyle(color: Color(0xFF7C4DFF), fontWeight: FontWeight.bold)),
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))
+                : const Text('保存', style: TextStyle(color: Color(0xFF7C4DFF), fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -175,7 +176,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
           if (isWide) {
             return Row(children: [
               Expanded(flex: 6, child: canvas),
-              const VerticalDivider(width: 1, color: Color(0xFF2A2A4A)),
+              Container(width: 1, color: const Color(0xFF1E1E36)),
               Expanded(flex: 4, child: panel),
             ]);
           }
