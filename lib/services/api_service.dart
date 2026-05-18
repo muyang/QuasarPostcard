@@ -10,7 +10,7 @@ class LoginResult {
 }
 
 class ApiService {
-  static String _baseUrl = 'http://127.0.0.1:8100';
+  static String _baseUrl = '';
   static String _token = '';
 
   static String get baseUrl => _baseUrl;
@@ -18,7 +18,7 @@ class ApiService {
 
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _baseUrl = prefs.getString('postcard_server_url') ?? 'http://127.0.0.1:8100';
+    _baseUrl = prefs.getString('postcard_server_url') ?? '';
     _token = prefs.getString('postcard_token') ?? '';
   }
 

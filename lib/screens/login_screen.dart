@@ -10,7 +10,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final _serverController = TextEditingController(text: 'http://127.0.0.1:8100');
+  final _serverController = TextEditingController(text: '');
   final _userController = TextEditingController(text: 'admin');
   final _passController = TextEditingController(text: 'postcard2024');
   bool _loading = false;
@@ -43,8 +43,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final password = _passController.text.trim();
 
     if (serverUrl.isEmpty) {
-      setState(() { _error = '请输入服务器地址'; _loading = false; });
-      return;
+      // Empty URL means use the current origin — works when Flutter app is served from same server as API
     }
 
     await ApiService.saveConfig(serverUrl, '');
@@ -84,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   const SizedBox(height: 6),
                   const Text('设计属于你的明信片，寄出一份心意', style: TextStyle(fontSize: 13, color: Color(0xFF666688))),
                   const SizedBox(height: 44),
-                  _buildField(controller: _serverController, label: '服务器地址', hint: 'http://192.168.1.161:8100', icon: Icons.dns_outlined),
+                  _buildField(controller: _serverController, label: '服务器地址', hint: '留空则使用当前地址', icon: Icons.dns_outlined),
                   const SizedBox(height: 14),
                   _buildField(controller: _userController, label: '用户名', hint: 'admin', icon: Icons.person_outline),
                   const SizedBox(height: 14),
