@@ -25,3 +25,9 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# SSL certs (never commit private keys)
+cert/
+
+# User-uploaded content
+backend/static/cards/
