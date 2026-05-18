@@ -1,0 +1,12 @@
+services:
+  postcard:
+    build: .
+    container_name: card-designer
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./data:/app/data
+      - ./backend/static/cards:/app/static/cards
+    environment:
+      - DB_PATH=sqlite:////app/data/postcard.db
+    restart: unless-stopped

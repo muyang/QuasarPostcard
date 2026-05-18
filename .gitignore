@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# SQLite DB
+*.db
+*.db-journal
+*.db-wal
+data/
+
+# IDE
+.vscode/
+.idea/
+
+# Flutter build artifacts
+.dart_tool/
+build/
+.flutter-plugins*
+.metadata
+**/pubspec.lock
+
+# OS
+.DS_Store
+Thumbs.db
