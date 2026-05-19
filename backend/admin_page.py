@@ -796,18 +796,22 @@ function renderCanvas(){
     document.getElementById('canvasOverlay').classList.remove('active');
   } else {
     canvas.style.cssText = `position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1A1A2E;border-radius:8px`;
-    canvas.innerHTML = `<svg width="110" height="110" viewBox="0 0 90 90">
-      <circle cx="45" cy="45" r="38" fill="none" stroke="#${data.color}" stroke-width="2.5" opacity="0.8"/>
-      <circle cx="45" cy="45" r="30" fill="none" stroke="#${data.color}" stroke-width="1" opacity="0.5"/>
-      ${Array.from({length:24},(_,i)=>{
-        const a=i*Math.PI*2/24;
-        const r1=33,r2=38;
-        const x1=45+Math.cos(a)*r1,y1=45+Math.sin(a)*r1;
-        const x2=45+Math.cos(a)*r2,y2=45+Math.sin(a)*r2;
-        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#${data.color}" stroke-width="0.5" opacity="0.5"/>`;
-      }).join('')}
-      <text x="45" y="48" text-anchor="middle" font-size="9" fill="#${data.color}" font-weight="bold" opacity="0.8">${data.date_text||'2026.05.13'}</text>
-    </svg>`;
+    if (data.image_url) {
+      canvas.innerHTML = `<img src="${data.image_url}" style="max-width:130px;max-height:130px;object-fit:contain" />`;
+    } else {
+      canvas.innerHTML = `<svg width="110" height="110" viewBox="0 0 90 90">
+        <circle cx="45" cy="45" r="38" fill="none" stroke="#${data.color}" stroke-width="2.5" opacity="0.8"/>
+        <circle cx="45" cy="45" r="30" fill="none" stroke="#${data.color}" stroke-width="1" opacity="0.5"/>
+        ${Array.from({length:24},(_,i)=>{
+          const a=i*Math.PI*2/24;
+          const r1=33,r2=38;
+          const x1=45+Math.cos(a)*r1,y1=45+Math.sin(a)*r1;
+          const x2=45+Math.cos(a)*r2,y2=45+Math.sin(a)*r2;
+          return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#${data.color}" stroke-width="0.5" opacity="0.5"/>`;
+        }).join('')}
+        <text x="45" y="48" text-anchor="middle" font-size="9" fill="#${data.color}" font-weight="bold" opacity="0.8">${data.date_text||'2026.05.13'}</text>
+      </svg>`;
+    }
     document.getElementById('canvasOverlay').innerHTML = '';
     document.getElementById('canvasOverlay').classList.remove('active');
   }

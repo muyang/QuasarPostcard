@@ -79,18 +79,6 @@ class PostcardCanvas extends StatelessWidget {
                       ),
                     ),
 
-                    // Postmark
-                    Positioned(
-                      left: w * template.postmarkX / 100 - 40 * template.postmarkScale / 100,
-                      top: h * template.postmarkY / 100 - 40 * template.postmarkScale / 100,
-                      child: Transform.scale(
-                        scale: template.postmarkScale / 100,
-                        child: postmark != null
-                            ? _buildPostmark(postmark, design.themeColor, stamp, template)
-                            : _buildPostmarkPlaceholder(),
-                      ),
-                    ),
-
                     // Stamp
                     Positioned(
                       left: w * template.stampX / 100 - 24 * template.stampScale / 100,
@@ -103,27 +91,45 @@ class PostcardCanvas extends StatelessWidget {
                             ),
                     ),
 
+                    // Postmark (rendered after stamp so it appears on top)
+                    Positioned(
+                      left: w * template.postmarkX / 100 - 40 * template.postmarkScale / 100,
+                      top: h * template.postmarkY / 100 - 40 * template.postmarkScale / 100,
+                      child: Transform.scale(
+                        scale: template.postmarkScale / 100,
+                        child: postmark != null
+                            ? _buildPostmark(postmark, design.themeColor, stamp, template)
+                            : _buildPostmarkPlaceholder(),
+                      ),
+                    ),
+
                     // Header line
                     Positioned(
                       left: w * 0.06, top: h * 0.04, right: w * 0.06,
                       child: _headerLine(design.themeColor),
                     ),
 
-                    // To field
+                    // To field (centered on position to match admin canvas)
                     Positioned(
                       left: w * template.toX / 100,
                       top: h * template.toY / 100,
-                      child: _addressLine('To:', design.toName, template.toColor, design.toName.isEmpty, fontSize: template.toSize, fontFamily: template.toFont),
+                      child: FractionalTranslation(
+                        translation: const Offset(-0.5, -0.5),
+                        child: _addressLine('To:', design.toName, template.toColor, design.toName.isEmpty, fontSize: template.toSize, fontFamily: template.toFont),
+                      ),
                     ),
 
-                    // From field
+                    // From field (centered on position to match admin canvas)
                     Positioned(
                       left: w * template.fromX / 100,
                       top: h * template.fromY / 100,
-                      child: _addressLine('From:', design.fromName, template.fromColor, design.fromName.isEmpty, fontSize: template.fromSize, fontFamily: template.fromFont),
+                      child: FractionalTranslation(
+                        translation: const Offset(-0.5, -0.5),
+                        child: _addressLine('From:', design.fromName, template.fromColor, design.fromName.isEmpty, fontSize: template.fromSize, fontFamily: template.fromFont),
+                      ),
                     ),
 
-                    // Message body
+                    // Message body (vertically centered on position like admin canvas)
                     Positioned(
                       left: w * template.messageX / 100,
                       top: h * template.messageY / 100,
