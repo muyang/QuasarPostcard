@@ -100,3 +100,13 @@ def delete_postcard(
     db.delete(card)
     db.commit()
     return {"success": True, "message": "已删除"}
+
+
+@router.post("/batch-delete")
+def batch_delete_postcards(data: dict, db: Session = Depends(get_db), _: str = Depends(verify_admin)):
+    ids = data.get("ids", [])
+    if not ids:
+        return {"success": False, "message": "未提供ID"}
+    deleted = db.query(Postcard).filter(Postcard.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    return {"success": True, "deleted": deleted}

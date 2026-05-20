@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/postcard.dart';
 import '../services/api_service.dart';
+import 'app_image.dart';
 
 enum EditorStep { template, text, stamp, postmark }
 
@@ -13,6 +14,7 @@ class EditorStepPanel extends StatelessWidget {
   final ValueChanged<EditorStep> onStepChanged;
   final ValueChanged<PostcardDesign> onDesignChanged;
   final VoidCallback onSend;
+  final bool materialsLoading;
 
   const EditorStepPanel({
     super.key,
@@ -21,6 +23,7 @@ class EditorStepPanel extends StatelessWidget {
     required this.onStepChanged,
     required this.onDesignChanged,
     required this.onSend,
+    this.materialsLoading = false,
   });
 
   @override
@@ -40,10 +43,10 @@ class EditorStepPanel extends StatelessWidget {
             child: IndexedStack(
               index: currentStep.index,
               children: [
-                _TemplateStep(design: design, onUpdate: (fn) => _update(fn), onNavigate: onStepChanged),
+                _TemplateStep(design: design, onUpdate: (fn) => _update(fn), onNavigate: onStepChanged, loading: materialsLoading),
                 _TextStep(design: design, onUpdate: (fn) => _update(fn), onNavigate: onStepChanged),
-                _StampStep(design: design, onUpdate: (fn) => _update(fn), onNavigate: onStepChanged),
-                _PostmarkStep(design: design, onUpdate: (fn) => _update(fn), onNavigate: onStepChanged, onSend: onSend),
+                _StampStep(design: design, onUpdate: (fn) => _update(fn), onNavigate: onStepChanged, loading: materialsLoading),
+                _PostmarkStep(design: design, onUpdate: (fn) => _update(fn), onNavigate: onStepChanged, onSend: onSend, loading: materialsLoading),
               ],
             ),
           ),
@@ -109,8 +112,9 @@ class _TemplateStep extends StatelessWidget {
   final PostcardDesign design;
   final void Function(void Function(PostcardDesign d)) onUpdate;
   final ValueChanged<EditorStep> onNavigate;
+  final bool loading;
 
-  const _TemplateStep({required this.design, required this.onUpdate, required this.onNavigate});
+  const _TemplateStep({required this.design, required this.onUpdate, required this.onNavigate, this.loading = false});
 
   @override
   Widget build(BuildContext context) {
@@ -120,63 +124,48 @@ class _TemplateStep extends StatelessWidget {
         const SizedBox(height: 8),
         const Text('选择模版', style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500)),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 56,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: design.templates.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final t = design.templates[i];
-              final sel = design.templateId == t.id;
-              return GestureDetector(
-                onTap: () => onUpdate((d) { d.templateId = t.id; }),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 76,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(colors: t.gradientColors),
-                    border: Border.all(color: sel ? const Color(0xFF7C4DFF) : Colors.white10, width: sel ? 2 : 1),
-                    boxShadow: sel ? [BoxShadow(color: const Color(0xFF7C4DFF).withOpacity(0.25), blurRadius: 8)] : null,
+        if (loading && design.templates.isEmpty)
+          const SizedBox(
+            height: 56,
+            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))),
+          )
+        else
+          SizedBox(
+            height: 56,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: design.templates.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final t = design.templates[i];
+                final sel = design.templateId == t.id;
+                return GestureDetector(
+                  onTap: () => onUpdate((d) { d.templateId = t.id; }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 76,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(colors: t.gradientColors),
+                      border: Border.all(color: sel ? const Color(0xFF7C4DFF) : Colors.white10, width: sel ? 2 : 1),
+                      boxShadow: sel ? [BoxShadow(color: const Color(0xFF7C4DFF).withOpacity(0.25), blurRadius: 8)] : null,
+                    ),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      if (t.imageUrl != null && t.imageUrl!.isNotEmpty)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: AppImage(url: t.imageUrl, width: 76, height: 34, fit: BoxFit.cover, thumbnailSize: 'thumb', errorWidget: () => Icon(Icons.style, size: 16, color: Colors.black45)),
+                        )
+                      else
+                        Icon(Icons.style, size: 16, color: Colors.black45),
+                      const SizedBox(height: 2),
+                      Text(t.name, style: TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w500)),
+                    ]),
                   ),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    if (t.imageUrl != null && t.imageUrl!.isNotEmpty)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(ApiService.imageUrl(t.imageUrl), width: 76, height: 34, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.style, size: 16, color: Colors.black45)),
-                      )
-                    else
-                      Icon(Icons.style, size: 16, color: Colors.black45),
-                    const SizedBox(height: 2),
-                    Text(t.name, style: TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w500)),
-                  ]),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: 18),
-        const Text('主题色', style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8, runSpacing: 8,
-          children: THEME_COLORS.map((tc) {
-            final sel = design.themeColor.value == tc.color.value;
-            return GestureDetector(
-              onTap: () => onUpdate((d) { d.themeColor = tc.color; }),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: sel ? 32 : 26, height: sel ? 32 : 26,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle, color: tc.color,
-                  border: sel ? Border.all(color: Colors.white, width: 2.5) : null,
-                  boxShadow: sel ? [BoxShadow(color: tc.color.withOpacity(0.4), blurRadius: 10)] : null,
-                ),
-              ),
-            );
-          }).toList(),
-        ),
         const SizedBox(height: 20),
         Align(alignment: Alignment.centerRight, child: _nextBtn(() => onNavigate(EditorStep.text))),
         const SizedBox(height: 16),
@@ -229,13 +218,13 @@ class _TextStepState extends State<_TextStep> {
         const Text('填写收寄人', style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500)),
         const SizedBox(height: 12),
         Row(children: [
-          Container(width: 28, child: Text('To:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tpl.toColor))),
+          Container(width: 42, child: Text('收件人', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tpl.toColor))),
           const SizedBox(width: 8),
           Expanded(child: TextField(controller: _toCtrl, decoration: const InputDecoration(hintText: '收件人名字', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10)), style: const TextStyle(fontSize: 14, color: Colors.white))),
         ]),
         const SizedBox(height: 10),
         Row(children: [
-          Container(width: 28, child: Text('From:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tpl.fromColor))),
+          Container(width: 42, child: Text('寄件人', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: tpl.fromColor))),
           const SizedBox(width: 8),
           Expanded(child: TextField(controller: _fromCtrl, decoration: const InputDecoration(hintText: '寄件人名字', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10)), style: const TextStyle(fontSize: 14, color: Colors.white))),
         ]),
@@ -257,8 +246,9 @@ class _StampStep extends StatelessWidget {
   final PostcardDesign design;
   final void Function(void Function(PostcardDesign d)) onUpdate;
   final ValueChanged<EditorStep> onNavigate;
+  final bool loading;
 
-  const _StampStep({required this.design, required this.onUpdate, required this.onNavigate});
+  const _StampStep({required this.design, required this.onUpdate, required this.onNavigate, this.loading = false});
 
   @override
   Widget build(BuildContext context) {
@@ -273,40 +263,46 @@ class _StampStep extends StatelessWidget {
             TextButton(onPressed: () => onUpdate((d) { d.stampId = null; }), child: const Text('移除', style: TextStyle(fontSize: 12, color: Colors.white38))),
         ]),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 136,
-          child: GridView.builder(
-            shrinkWrap: true,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 0.85),
-            itemCount: design.stamps.length,
-            itemBuilder: (_, i) {
-              final s = design.stamps[i];
-              final sel = design.stampId == s.id;
-              return GestureDetector(
-                onTap: () => onUpdate((d) { d.stampId = s.id; }),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E36), borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: sel ? s.accentColor : Colors.white10, width: sel ? 2 : 1),
-                    boxShadow: sel ? [BoxShadow(color: s.accentColor.withOpacity(0.25), blurRadius: 8)] : null,
+        if (loading && design.stamps.isEmpty)
+          const SizedBox(
+            height: 136,
+            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))),
+          )
+        else
+          SizedBox(
+            height: 136,
+            child: GridView.builder(
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 0.85),
+              itemCount: design.stamps.length,
+              itemBuilder: (_, i) {
+                final s = design.stamps[i];
+                final sel = design.stampId == s.id;
+                return GestureDetector(
+                  onTap: () => onUpdate((d) { d.stampId = s.id; }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E36), borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: sel ? s.accentColor : Colors.white10, width: sel ? 2 : 1),
+                      boxShadow: sel ? [BoxShadow(color: s.accentColor.withOpacity(0.25), blurRadius: 8)] : null,
+                    ),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      if (s.imageUrl != null && s.imageUrl!.isNotEmpty)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: AppImage(url: s.imageUrl, width: 40, height: 40, fit: BoxFit.cover, thumbnailSize: 'thumb', errorWidget: () => Text(s.emoji, style: TextStyle(fontSize: sel ? 32 : 28))),
+                        )
+                      else
+                        Text(s.emoji, style: TextStyle(fontSize: sel ? 32 : 28)),
+                      const SizedBox(height: 4),
+                      Text(s.label, style: TextStyle(fontSize: 10, color: sel ? Colors.white : Colors.white54)),
+                    ]),
                   ),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    if (s.imageUrl != null && s.imageUrl!.isNotEmpty)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.network(ApiService.imageUrl(s.imageUrl), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Text(s.emoji, style: TextStyle(fontSize: sel ? 32 : 28))),
-                      )
-                    else
-                      Text(s.emoji, style: TextStyle(fontSize: sel ? 32 : 28)),
-                    const SizedBox(height: 4),
-                    Text(s.label, style: TextStyle(fontSize: 10, color: sel ? Colors.white : Colors.white54)),
-                  ]),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
         const SizedBox(height: 16),
         Row(children: [_prevBtn(() => onNavigate(EditorStep.text)), const Spacer(), _nextBtn(() => onNavigate(EditorStep.postmark))]),
         const SizedBox(height: 16),
@@ -322,8 +318,9 @@ class _PostmarkStep extends StatelessWidget {
   final void Function(void Function(PostcardDesign d)) onUpdate;
   final ValueChanged<EditorStep> onNavigate;
   final VoidCallback onSend;
+  final bool loading;
 
-  const _PostmarkStep({required this.design, required this.onUpdate, required this.onNavigate, required this.onSend});
+  const _PostmarkStep({required this.design, required this.onUpdate, required this.onNavigate, required this.onSend, this.loading = false});
 
   bool get _canSend => design.stampId != null && design.postmarkId != null;
 
@@ -335,37 +332,43 @@ class _PostmarkStep extends StatelessWidget {
         const SizedBox(height: 8),
         const Text('选择邮戳', style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500)),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 60,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: design.postmarks.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final p = design.postmarks[i];
-              final sel = design.postmarkId == p.id;
-              return GestureDetector(
-                onTap: () => onUpdate((d) { d.postmarkId = p.id; }),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 76,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E36), borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: sel ? p.color : Colors.white10, width: sel ? 2 : 1),
+        if (loading && design.postmarks.isEmpty)
+          const SizedBox(
+            height: 60,
+            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))),
+          )
+        else
+          SizedBox(
+            height: 60,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: design.postmarks.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final p = design.postmarks[i];
+                final sel = design.postmarkId == p.id;
+                return GestureDetector(
+                  onTap: () => onUpdate((d) { d.postmarkId = p.id; }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 76,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E36), borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: sel ? p.color : Colors.white10, width: sel ? 2 : 1),
+                    ),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      if (p.imageUrl != null && p.imageUrl!.isNotEmpty)
+                        ClipRRect(borderRadius: BorderRadius.circular(8), child: AppImage(url: p.imageUrl, width: 28, height: 28, fit: BoxFit.cover, thumbnailSize: 'thumb', errorWidget: () => Icon(Icons.circle_outlined, size: 22, color: p.color)))
+                      else
+                        Icon(Icons.circle_outlined, size: 22, color: p.color),
+                      const SizedBox(height: 2),
+                      Text(p.label, style: TextStyle(fontSize: 10, color: sel ? Colors.white : Colors.white54)),
+                    ]),
                   ),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    if (p.imageUrl != null && p.imageUrl!.isNotEmpty)
-                      ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(ApiService.imageUrl(p.imageUrl), width: 28, height: 28, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.circle_outlined, size: 22, color: p.color)))
-                    else
-                      Icon(Icons.circle_outlined, size: 22, color: p.color),
-                    const SizedBox(height: 2),
-                    Text(p.label, style: TextStyle(fontSize: 10, color: sel ? Colors.white : Colors.white54)),
-                  ]),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
         const SizedBox(height: 28),
         Row(children: [
           _prevBtn(() => onNavigate(EditorStep.stamp)),

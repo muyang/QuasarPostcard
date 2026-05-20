@@ -58,6 +58,7 @@ class PostcardTemplate(Base):
     message_x = Column(Integer, default=10)
     message_y = Column(Integer, default=60)
     message_w = Column(Integer, default=80)
+    message_h = Column(Integer, default=80)
     # Stamp position & transform
     stamp_x = Column(Integer, default=78)
     stamp_y = Column(Integer, default=5)
@@ -68,6 +69,19 @@ class PostcardTemplate(Base):
     postmark_y = Column(Integer, default=45)
     postmark_rotation = Column(Integer, default=0)
     postmark_scale = Column(Integer, default=100)
+    # From/To box styling
+    from_w = Column(Integer, default=120)
+    from_h = Column(Integer, default=28)
+    to_w = Column(Integer, default=120)
+    to_h = Column(Integer, default=28)
+    from_border_color = Column(String(16), default="CCCCCC")
+    to_border_color = Column(String(16), default="CCCCCC")
+    from_border_width = Column(Integer, default=0)
+    to_border_width = Column(Integer, default=0)
+    from_bg_color = Column(String(16), default="FFFFFF")
+    to_bg_color = Column(String(16), default="FFFFFF")
+    from_bg_opacity = Column(Integer, default=0)
+    to_bg_opacity = Column(Integer, default=0)
 
 
 class PostcardStamp(Base):

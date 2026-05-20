@@ -18,6 +18,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
   late PostcardDesign _design;
   EditorStep _step = EditorStep.template;
   bool _saving = false;
+  bool _materialsLoading = true;
   bool _stampAnimating = false;
   bool _sending = false;
   bool _downloading = false;
@@ -32,18 +33,27 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
 
   Future<void> _loadMaterials() async {
     try {
-      final templates = await ApiService.getTemplates();
-      final stamps = await ApiService.getStamps();
-      final postmarks = await ApiService.getPostmarks();
+      final results = await Future.wait([
+        ApiService.getTemplates(),
+        ApiService.getStamps(),
+        ApiService.getPostmarks(),
+      ]);
       if (!mounted) return;
+      final templates = results[0] as List<Map<String, dynamic>>;
+      final stamps = results[1] as List<Map<String, dynamic>>;
+      final postmarks = results[2] as List<Map<String, dynamic>>;
       setState(() {
         _design.updateMaterials(
           templates: templates.map((j) => PostcardTemplate.fromJson(j)).toList(),
           stamps: stamps.map((j) => PostcardStamp.fromJson(j)).toList(),
           postmarks: postmarks.map((j) => PostcardPostmark.fromJson(j)).toList(),
         );
+        _materialsLoading = false;
       });
-    } catch (_) {}
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _materialsLoading = false);
+    }
   }
 
   Future<void> _save() async {
@@ -172,6 +182,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
             onStepChanged: _onStepChanged,
             onDesignChanged: (d) => setState(() => _design = d),
             onSend: _onSend,
+            materialsLoading: _materialsLoading,
           );
           if (isWide) {
             return Row(children: [

@@ -55,8 +55,8 @@ body{font-family:-apple-system,sans-serif;background:#121212;color:#eee;display:
 #editBody{flex:1;display:flex;overflow:hidden}
 
 /* Canvas area */
-#canvasWrap{flex:1;display:flex;align-items:center;justify-content:center;padding:30px;background:#0D0D1A;position:relative;overflow:auto;min-width:420px}
-#canvasContainer{position:relative;width:420px;height:270px;flex-shrink:0}
+#canvasWrap{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;background:#0D0D1A;position:relative;overflow:hidden}
+#canvasContainer{position:relative;width:420px;height:270px;flex-shrink:0;transform-origin:center center}
 #postcardCanvas{position:absolute;inset:0;border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5)}
 #canvasOverlay{position:absolute;inset:0;z-index:2;pointer-events:none}
 #canvasOverlay.active{pointer-events:auto}
@@ -157,6 +157,15 @@ body{font-family:-apple-system,sans-serif;background:#121212;color:#eee;display:
 .toast.error{background:#C62828;color:#fff}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
+/* Batch actions bar */
+#batchBar{display:none;align-items:center;gap:8px;padding:8px 16px;background:#2D1B3D;border-bottom:1px solid #7C4DFF}
+#batchBar.show{display:flex}
+#batchBar .count{font-size:12px;color:#7C4DFF;font-weight:600}
+#batchBar .btn{margin-left:auto}
+.card-check{flex-shrink:0;width:18px;height:18px;accent-color:#7C4DFF;cursor:pointer}
+.card-check:not(.show){display:none}
+.card-check.show{display:block}
+
 /* Scrollbar */
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -178,6 +187,7 @@ body{font-family:-apple-system,sans-serif;background:#121212;color:#eee;display:
   <div class="toolbar">
     <div class="toolbar-row">
       <button class="btn btn-primary" style="flex:1" onclick="addNew()">+ 新增</button>
+      <button class="btn btn-outline" onclick="cloneItem()" title="复制选中素材">📋 复制</button>
       <button class="btn btn-outline" onclick="seedData()">初始化默认</button>
     </div>
     <div class="search-bar">
@@ -189,6 +199,11 @@ body{font-family:-apple-system,sans-serif;background:#121212;color:#eee;display:
         <option value="published_member">发布-会员</option>
       </select>
     </div>
+  </div>
+  <div id="batchBar">
+    <input type="checkbox" class="card-check show" id="selectAllCheck" onchange="toggleSelectAll()" title="全选/取消">
+    <span class="count" id="batchCount">已选 0 项</span>
+    <button class="btn btn-danger btn-small" onclick="batchDelete()">🗑 批量删除</button>
   </div>
   <div id="list"></div>
   <div class="pagination" id="pagination" style="display:none">
@@ -237,11 +252,13 @@ let totalCount = 0;
 const PAGE_SIZE = 20;
 let searchTimeout = null;
 let canvasZoom = 1;
+let zoomOffset = 0;
 let showGrid = false;
 let activeEl = null; // currently selected canvas element
 let dragState = null; // { el, type:'move'|'rotate'|'resize', startX, startY, startLeft, startTop, startRot, startScale, corner }
 let allStamps = []; // cached stamps for stamp selector
 let allPostmarks = []; // cached postmarks for postmark selector
+let selectedIds = new Set(); // batch selection
 
 // ============== API ==============
 async function api(path, method='GET', body=null, isFile=false) {
@@ -323,8 +340,9 @@ function statusLabel(s) {
 
 function render(items){
   const el=document.getElementById('list');
-  if(!items.length){el.innerHTML='<div class="empty">暂无数据</div>';return}
+  if(!items.length){el.innerHTML='<div class="empty">暂无数据</div>';updateBatchBar();return}
   el.innerHTML=items.map(item=>{
+    const isChecked = selectedIds.has(item.id);
     let previewHtml, sub;
     const stBadge = `<span class="badge badge-${item.status||'draft'}">${statusLabel(item.status)}</span>`;
     if(currentTab==='templates'){
@@ -341,14 +359,18 @@ function render(items){
       previewHtml=`<div class="preview" style="${bgImg}background-color:#2A2A4A">🔘</div>`;
       sub=`${item.id} · ${item.date_text} · #${item.color}`;
     }
-    return `<div class="card${selectedItem&&selectedItem.id===item.id?' selected':''}" onclick="selectItem('${item.id}')">
-      ${previewHtml}
-      <div class="info">
-        <div class="title-row"><span class="title">${item.name||item.label}</span>${stBadge}</div>
-        <div class="sub">${sub}</div>
+    return `<div class="card${selectedItem&&selectedItem.id===item.id?' selected':''}">
+      <input type="checkbox" class="card-check show" ${isChecked?'checked':''} onclick="event.stopPropagation();toggleSelect('${item.id}')">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0" onclick="selectItem('${item.id}')" style="cursor:pointer">
+        ${previewHtml}
+        <div class="info">
+          <div class="title-row"><span class="title">${item.name||item.label}</span>${stBadge}</div>
+          <div class="sub">${sub}</div>
+        </div>
       </div>
     </div>`;
   }).join('');
+  updateBatchBar();
 }
 
 async function selectItem(id){
@@ -363,22 +385,27 @@ async function addNew(){
   await loadAllMaterials();
   if(currentTab==='templates'){
     selectedItem = {
-      id: '', name: '', gradient_from: 'FFF0F5', gradient_to: 'FFC0CB', gradient_mid: 'FFE4E1',
+      id: generateAutoId(), name: '', gradient_from: 'FFF0F5', gradient_to: 'FFC0CB', gradient_mid: 'FFE4E1',
       corner_radius: 8, pattern: '', image_url: null, status: 'published_free',
       from_font:'sans-serif',to_font:'sans-serif',message_font:'sans-serif',
       from_color:'333333',to_color:'333333',message_color:'555555',
       from_size:14,to_size:14,message_size:13,
-      from_x:10,from_y:82,to_x:55,to_y:82,message_x:10,message_y:60,message_w:80,
+      from_x:10,from_y:82,to_x:55,to_y:82,message_x:10,message_y:60,message_w:80,message_h:80,
       stamp_x:78,stamp_y:5,stamp_rotation:0,stamp_scale:100,
-      postmark_x:45,postmark_y:45,postmark_rotation:0,postmark_scale:100
+      postmark_x:45,postmark_y:45,postmark_rotation:0,postmark_scale:100,
+      from_w:120,from_h:28,to_w:120,to_h:28,
+      from_border_color:'CCCCCC',to_border_color:'CCCCCC',
+      from_border_width:0,to_border_width:0,
+      from_bg_color:'FFFFFF',to_bg_color:'FFFFFF',
+      from_bg_opacity:0,to_bg_opacity:0
     };
   } else if(currentTab==='stamps'){
     selectedItem = {
-      id: '', label: '', accent_color: 'FFB7C5', image_url: null, status: 'published_free'
+      id: generateAutoId(), label: '', accent_color: 'FFB7C5', image_url: null, status: 'published_free'
     };
   } else {
     selectedItem = {
-      id: '', label: '', date_text: '2026.05.13', color: '333333', image_url: null, status: 'published_free'
+      id: generateAutoId(), label: '', date_text: '2026.05.13', color: '333333', image_url: null, status: 'published_free'
     };
   }
   load(currentPage);
@@ -411,16 +438,18 @@ const FONT_LIST = [
 
 // ============== AUTO ID ==============
 function generateAutoId() {
-  let prefix = currentTab === 'templates' ? 'tpl_' : currentTab === 'stamps' ? 'stp_' : 'pmk_';
+  const prefixes = { templates: 'TPL', stamps: 'STP', postmarks: 'PMK' };
+  const prefix = prefixes[currentTab] || 'ITM';
   let maxNum = 0;
+  const pattern = new RegExp('^' + prefix + '[-_]?(\\d+)$', 'i');
   cachedItems.forEach(item => {
-    const match = item.id && item.id.match(new RegExp('^' + prefix + '(\\d+)$'));
+    const match = item.id && item.id.match(pattern);
     if (match) {
       const n = parseInt(match[1]);
       if (n > maxNum) maxNum = n;
     }
   });
-  return prefix + String(maxNum + 1).padStart(3, '0');
+  return prefix + '-' + String(maxNum + 1).padStart(3, '0');
 }
 
 // ============== FORM RENDERING ==============
@@ -430,6 +459,13 @@ function renderForm(){
   let html='';
 
   if(currentTab==='templates'){
+    // Top action buttons
+    html+=`<div class="actions" style="margin-top:0;padding-top:0;margin-bottom:14px;border-bottom:1px solid #2A2A4A">
+      <button class="btn btn-primary btn-small" onclick="saveItem()">💾 保存</button>
+      <button class="btn btn-outline btn-small" onclick="saveAsItem()">📋 另存为</button>
+      ${editingId?`<button class="btn btn-danger btn-small" onclick="deleteItem()">🗑 删除</button>`:''}
+      <button class="btn btn-outline btn-small" onclick="hideEditPanel()">取消</button>
+    </div>`;
     // --- Basic info ---
     html+=`<div class="section">
       <h4>📋 基本信息</h4>
@@ -467,8 +503,8 @@ function renderForm(){
 
     // --- From text section ---
     html+=`<div class="section">
-      <h4 class="section-toggle" onclick="toggleSection(this)"><span class="arrow">▼</span> ✉️ From 寄件人</h4>
-      <div class="section-content" style="max-height:500px">
+      <h4 class="section-toggle" onclick="toggleSection(this)"><span class="arrow">▼</span> ✉️ 寄件人</h4>
+      <div class="section-content" style="max-height:800px">
       <div class="form-group"><label>字体</label><select id="f_from_font">${FONT_LIST.map(f=>`<option value="${f}" ${(item.from_font||'sans-serif')===f?'selected':''}>${f}</option>`).join('')}</select></div>
       <div class="form-row">
         <div class="form-group"><label>颜色</label><div class="color-row"><input type="color" id="f_from_color_pick" value="#${item.from_color||'333333'}" onchange="syncColor(this,'f_from_color')"><input id="f_from_color" value="${item.from_color||'333333'}" oninput="syncPick(this,'f_from_color_pick')"></div></div>
@@ -477,19 +513,31 @@ function renderForm(){
       <div class="form-row-3">
         <div class="form-group"><label>X%</label><input id="f_from_x" type="number" value="${item.from_x||10}" min="0" max="100"></div>
         <div class="form-group"><label>Y%</label><input id="f_from_y" type="number" value="${item.from_y||82}" min="0" max="100"></div>
-        <div class="align-btns" style="padding-top:16px">
-          <button title="左对齐" onclick="alignEl('from','left')">⬅</button>
-          <button title="居中" onclick="alignEl('from','center')">⬛</button>
-          <button title="右对齐" onclick="alignEl('from','right')">➡</button>
-        </div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>宽(px)</label><input id="f_from_w" type="number" value="${item.from_w||120}" min="50" max="400"></div>
+        <div class="form-group"><label>高(px)</label><input id="f_from_h" type="number" value="${item.from_h||28}" min="16" max="200"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>边框色</label><div class="color-row"><input type="color" id="f_from_border_color_pick" value="#${item.from_border_color||'CCCCCC'}" onchange="syncColor(this,'f_from_border_color')"><input id="f_from_border_color" value="${item.from_border_color||'CCCCCC'}" oninput="syncPick(this,'f_from_border_color_pick')"></div></div>
+        <div class="form-group"><label>边框宽</label><input id="f_from_border_width" type="number" value="${item.from_border_width||0}" min="0" max="10"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>背景色</label><div class="color-row"><input type="color" id="f_from_bg_color_pick" value="#${item.from_bg_color||'FFFFFF'}" onchange="syncColor(this,'f_from_bg_color')"><input id="f_from_bg_color" value="${item.from_bg_color||'FFFFFF'}" oninput="syncPick(this,'f_from_bg_color_pick')"></div></div>
+        <div class="form-group"><label>背景透明度</label><input id="f_from_bg_opacity" type="number" value="${item.from_bg_opacity||0}" min="0" max="100"></div>
+      </div>
+      <div class="align-btns" style="padding-top:4px">
+        <button title="左对齐" onclick="alignEl('from','left')">⬅</button>
+        <button title="居中" onclick="alignEl('from','center')">⬛</button>
+        <button title="右对齐" onclick="alignEl('from','right')">➡</button>
       </div>
       </div>
     </div>`;
 
     // --- To text section ---
     html+=`<div class="section">
-      <h4 class="section-toggle" onclick="toggleSection(this)"><span class="arrow">▼</span> 📬 To 收件人</h4>
-      <div class="section-content" style="max-height:500px">
+      <h4 class="section-toggle" onclick="toggleSection(this)"><span class="arrow">▼</span> 📬 收件人</h4>
+      <div class="section-content" style="max-height:800px">
       <div class="form-group"><label>字体</label><select id="f_to_font">${FONT_LIST.map(f=>`<option value="${f}" ${(item.to_font||'sans-serif')===f?'selected':''}>${f}</option>`).join('')}</select></div>
       <div class="form-row">
         <div class="form-group"><label>颜色</label><div class="color-row"><input type="color" id="f_to_color_pick" value="#${item.to_color||'333333'}" onchange="syncColor(this,'f_to_color')"><input id="f_to_color" value="${item.to_color||'333333'}" oninput="syncPick(this,'f_to_color_pick')"></div></div>
@@ -498,11 +546,23 @@ function renderForm(){
       <div class="form-row-3">
         <div class="form-group"><label>X%</label><input id="f_to_x" type="number" value="${item.to_x||55}" min="0" max="100"></div>
         <div class="form-group"><label>Y%</label><input id="f_to_y" type="number" value="${item.to_y||82}" min="0" max="100"></div>
-        <div class="align-btns" style="padding-top:16px">
-          <button title="左对齐" onclick="alignEl('to','left')">⬅</button>
-          <button title="居中" onclick="alignEl('to','center')">⬛</button>
-          <button title="右对齐" onclick="alignEl('to','right')">➡</button>
-        </div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><label>宽(px)</label><input id="f_to_w" type="number" value="${item.to_w||120}" min="50" max="400"></div>
+        <div class="form-group"><label>高(px)</label><input id="f_to_h" type="number" value="${item.to_h||28}" min="16" max="200"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>边框色</label><div class="color-row"><input type="color" id="f_to_border_color_pick" value="#${item.to_border_color||'CCCCCC'}" onchange="syncColor(this,'f_to_border_color')"><input id="f_to_border_color" value="${item.to_border_color||'CCCCCC'}" oninput="syncPick(this,'f_to_border_color_pick')"></div></div>
+        <div class="form-group"><label>边框宽</label><input id="f_to_border_width" type="number" value="${item.to_border_width||0}" min="0" max="10"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>背景色</label><div class="color-row"><input type="color" id="f_to_bg_color_pick" value="#${item.to_bg_color||'FFFFFF'}" onchange="syncColor(this,'f_to_bg_color')"><input id="f_to_bg_color" value="${item.to_bg_color||'FFFFFF'}" oninput="syncPick(this,'f_to_bg_color_pick')"></div></div>
+        <div class="form-group"><label>背景透明度</label><input id="f_to_bg_opacity" type="number" value="${item.to_bg_opacity||0}" min="0" max="100"></div>
+      </div>
+      <div class="align-btns" style="padding-top:4px">
+        <button title="左对齐" onclick="alignEl('to','left')">⬅</button>
+        <button title="居中" onclick="alignEl('to','center')">⬛</button>
+        <button title="右对齐" onclick="alignEl('to','right')">➡</button>
       </div>
       </div>
     </div>`;
@@ -520,6 +580,9 @@ function renderForm(){
         <div class="form-group"><label>X%</label><input id="f_message_x" type="number" value="${item.message_x||10}" min="0" max="100"></div>
         <div class="form-group"><label>Y%</label><input id="f_message_y" type="number" value="${item.message_y||60}" min="0" max="100"></div>
         <div class="form-group xs"><label>宽%</label><input id="f_message_w" type="number" value="${item.message_w||80}" min="10" max="100"></div>
+      </div>
+      <div class="form-row-3" style="margin-top:6px">
+        <div class="form-group xs"><label>高(px)</label><input id="f_message_h" type="number" value="${item.message_h||80}" min="30" max="300"></div>
       </div>
       </div>
     </div>`;
@@ -564,6 +627,12 @@ function renderForm(){
     </div>`;
 
   } else if(currentTab==='stamps'){
+    html+=`<div class="actions" style="margin-top:0;padding-top:0;margin-bottom:14px;border-bottom:1px solid #2A2A4A">
+      <button class="btn btn-primary btn-small" onclick="saveItem()">💾 保存</button>
+      <button class="btn btn-outline btn-small" onclick="saveAsItem()">📋 另存为</button>
+      ${editingId?`<button class="btn btn-danger btn-small" onclick="deleteItem()">🗑 删除</button>`:''}
+      <button class="btn btn-outline btn-small" onclick="hideEditPanel()">取消</button>
+    </div>`;
     html+=`<div class="section">
       <h4>🏷 邮票信息</h4>
       <div class="form-row">
@@ -576,6 +645,12 @@ function renderForm(){
     </div>`;
 
   } else {
+    html+=`<div class="actions" style="margin-top:0;padding-top:0;margin-bottom:14px;border-bottom:1px solid #2A2A4A">
+      <button class="btn btn-primary btn-small" onclick="saveItem()">💾 保存</button>
+      <button class="btn btn-outline btn-small" onclick="saveAsItem()">📋 另存为</button>
+      ${editingId?`<button class="btn btn-danger btn-small" onclick="deleteItem()">🗑 删除</button>`:''}
+      <button class="btn btn-outline btn-small" onclick="hideEditPanel()">取消</button>
+    </div>`;
     html+=`<div class="section">
       <h4>🔵 邮戳信息</h4>
       <div class="form-row">
@@ -622,6 +697,7 @@ function renderForm(){
   // --- Actions ---
   html+=`<div class="actions">
     <button class="btn btn-primary" onclick="saveItem()">💾 保存</button>
+    <button class="btn btn-outline" onclick="saveAsItem()">📋 另存为</button>
     ${editingId?`<button class="btn btn-danger" onclick="deleteItem()">🗑 删除</button>`:''}
     <button class="btn btn-outline" onclick="hideEditPanel()">取消</button>
   </div>`;
@@ -682,6 +758,7 @@ function getFormData(){
     data.message_x=parseInt(document.getElementById('f_message_x')?.value)||10;
     data.message_y=parseInt(document.getElementById('f_message_y')?.value)||60;
     data.message_w=parseInt(document.getElementById('f_message_w')?.value)||80;
+    data.message_h=parseInt(document.getElementById('f_message_h')?.value)||80;
     data.stamp_x=parseInt(document.getElementById('f_stamp_x')?.value)||78;
     data.stamp_y=parseInt(document.getElementById('f_stamp_y')?.value)||5;
     data.stamp_rotation=parseInt(document.getElementById('f_stamp_rotation')?.value)||0;
@@ -690,6 +767,18 @@ function getFormData(){
     data.postmark_y=parseInt(document.getElementById('f_postmark_y')?.value)||45;
     data.postmark_rotation=parseInt(document.getElementById('f_postmark_rotation')?.value)||0;
     data.postmark_scale=parseInt(document.getElementById('f_postmark_scale')?.value)||100;
+    data.from_w=parseInt(document.getElementById('f_from_w')?.value)||120;
+    data.from_h=parseInt(document.getElementById('f_from_h')?.value)||28;
+    data.to_w=parseInt(document.getElementById('f_to_w')?.value)||120;
+    data.to_h=parseInt(document.getElementById('f_to_h')?.value)||28;
+    data.from_border_color=document.getElementById('f_from_border_color')?.value||'CCCCCC';
+    data.to_border_color=document.getElementById('f_to_border_color')?.value||'CCCCCC';
+    data.from_border_width=parseInt(document.getElementById('f_from_border_width')?.value)||0;
+    data.to_border_width=parseInt(document.getElementById('f_to_border_width')?.value)||0;
+    data.from_bg_color=document.getElementById('f_from_bg_color')?.value||'FFFFFF';
+    data.to_bg_color=document.getElementById('f_to_bg_color')?.value||'FFFFFF';
+    data.from_bg_opacity=parseInt(document.getElementById('f_from_bg_opacity')?.value)||0;
+    data.to_bg_opacity=parseInt(document.getElementById('f_to_bg_opacity')?.value)||0;
   } else if(currentTab==='stamps'){
     data.id=document.getElementById('f_id')?.value||'';
     data.label=document.getElementById('f_label')?.value||'';
@@ -734,31 +823,50 @@ function renderCanvas(){
       overlayHTML += `<div style="position:absolute;top:10px;right:14px;font-size:22px;opacity:0.25;pointer-events:none">${patternEmoji}</div>`;
     }
     // From text element
-    overlayHTML += `<div class="canvas-el${activeEl==='from'?' selected':''}" id="el-from"
-      style="left:${data.from_x||10}%;top:${data.from_y||82}%;font-family:'${data.from_font||'sans-serif'}',sans-serif;font-size:${data.from_size||14}px;color:#${data.from_color||'333333'};transform:translate(-50%,-50%)"
+    const fromW = data.from_w || 120;
+    const fromH = data.from_h || 28;
+    const fromBorderW = data.from_border_width || 0;
+    const fromBorderC = data.from_border_color || 'CCCCCC';
+    const fromBgC = data.from_bg_color || 'FFFFFF';
+    const fromBgO = (data.from_bg_opacity || 0) / 100;
+    overlayHTML += `<div class="canvas-placeholder${activeEl==='from'?' selected':''}" id="el-from"
+      style="left:${data.from_x||10}%;top:${data.from_y||82}%;width:${fromW}px;height:${fromH}px;transform:translate(-50%,-50%);font-family:'${data.from_font||'sans-serif'}',sans-serif;font-size:${data.from_size||14}px;color:#${data.from_color||'333333'};border:${fromBorderW}px solid #${fromBorderC};background:rgba(${parseInt(fromBgC.substr(0,2),16)},${parseInt(fromBgC.substr(2,2),16)},${parseInt(fromBgC.substr(4,2),16)},${fromBgO});border-radius:4px;display:flex;align-items:center;justify-content:flex-start;padding:2px 8px;white-space:nowrap;overflow:hidden"
       onmousedown="startDrag(event,'from')">
       <div class="rotate-handle" onmousedown="startRotate(event,'from')"></div>
-      <div class="el-label">From</div>
-      From: ______
+      <div class="el-label">寄件人</div>
+      <div class="resize-handle" style="bottom:-4px;right:-4px;cursor:se-resize" onmousedown="startResize(event,'from','br')"></div>
+      寄件人
     </div>`;
 
     // To text element
-    overlayHTML += `<div class="canvas-el${activeEl==='to'?' selected':''}" id="el-to"
-      style="left:${data.to_x||55}%;top:${data.to_y||82}%;font-family:'${data.to_font||'sans-serif'}',sans-serif;font-size:${data.to_size||14}px;color:#${data.to_color||'333333'};transform:translate(-50%,-50%)"
+    const toW = data.to_w || 120;
+    const toH = data.to_h || 28;
+    const toBorderW = data.to_border_width || 0;
+    const toBorderC = data.to_border_color || 'CCCCCC';
+    const toBgC = data.to_bg_color || 'FFFFFF';
+    const toBgO = (data.to_bg_opacity || 0) / 100;
+    overlayHTML += `<div class="canvas-placeholder${activeEl==='to'?' selected':''}" id="el-to"
+      style="left:${data.to_x||55}%;top:${data.to_y||82}%;width:${toW}px;height:${toH}px;transform:translate(-50%,-50%);font-family:'${data.to_font||'sans-serif'}',sans-serif;font-size:${data.to_size||14}px;color:#${data.to_color||'333333'};border:${toBorderW}px solid #${toBorderC};background:rgba(${parseInt(toBgC.substr(0,2),16)},${parseInt(toBgC.substr(2,2),16)},${parseInt(toBgC.substr(4,2),16)},${toBgO});border-radius:4px;display:flex;align-items:center;justify-content:flex-start;padding:2px 8px;white-space:nowrap;overflow:hidden"
       onmousedown="startDrag(event,'to')">
       <div class="rotate-handle" onmousedown="startRotate(event,'to')"></div>
-      <div class="el-label">To</div>
-      To: ______
+      <div class="el-label">收件人</div>
+      <div class="resize-handle" style="bottom:-4px;right:-4px;cursor:se-resize" onmousedown="startResize(event,'to','br')"></div>
+      收件人
     </div>`;
 
-    // Message placeholder (dashed outline)
+    // Message placeholder (dashed outline, multi-line text area)
     const msgW = data.message_w || 80;
+    const msgH = data.message_h || 80;
+    const msgSize = data.message_size || 13;
+    const msgColor = data.message_color || '555555';
+    const msgFont = data.message_font || 'sans-serif';
     overlayHTML += `<div class="canvas-placeholder${activeEl==='message'?' selected':''}" id="el-message"
-      style="left:${data.message_x||10}%;top:${data.message_y||60}%;width:${msgW}%;height:${Math.max(20, (data.message_size||13) * 1.8)}px;transform:translate(0,-50%)"
+      style="left:${data.message_x||10}%;top:${data.message_y||60}%;width:${msgW}%;height:${msgH}px;transform:translate(0,0);border-radius:4px;display:flex;align-items:flex-start;padding:6px 8px;text-align:left;overflow:hidden;font-family:'${msgFont}',sans-serif;font-size:${msgSize}px;color:#${msgColor};font-style:italic;line-height:1.5;white-space:normal;word-wrap:break-word"
       onmousedown="startDrag(event,'message')">
       <div class="rotate-handle" onmousedown="startRotate(event,'message')"></div>
       <div class="el-label">祝福语区域</div>
-      💬 祝福语
+      <div class="resize-handle" style="bottom:-4px;right:-4px;cursor:se-resize" onmousedown="startResize(event,'message','br')"></div>
+      思念随风飘向远方，愿这份心意跨越山海抵达你的身边。
     </div>`;
 
     // Stamp placeholder (dashed outline)
@@ -817,7 +925,7 @@ function renderCanvas(){
   }
 
   // Apply zoom
-  document.getElementById('canvasContainer').style.transform = `scale(${canvasZoom})`;
+  applyCanvasZoom();
 }
 
 // ============== DRAG & ROTATE ==============
@@ -825,18 +933,23 @@ function startDrag(e, elName) {
   e.preventDefault();
   e.stopPropagation();
   activeEl = elName;
-  renderCanvas();
-  const el = document.getElementById('el-'+elName);
-  const overlay = document.getElementById('canvasOverlay');
-  const rect = overlay.getBoundingClientRect();
+
+  const xKey = elName === 'stamp' ? 'f_stamp_x' : elName === 'postmark' ? 'f_postmark_x' : `f_${elName}_x`;
+  const yKey = elName === 'stamp' ? 'f_stamp_y' : elName === 'postmark' ? 'f_postmark_y' : `f_${elName}_y`;
+  const startValX = parseFloat(document.getElementById(xKey)?.value) || 0;
+  const startValY = parseFloat(document.getElementById(yKey)?.value) || 0;
+
   dragState = {
     el: elName,
     type: 'move',
-    startX: e.clientX,
-    startY: e.clientY,
-    currentX: e.clientX,
-    currentY: e.clientY
+    startMouseX: e.clientX,
+    startMouseY: e.clientY,
+    startValX: startValX,
+    startValY: startValY,
+    rafId: null
   };
+
+  renderCanvas();
   document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', stopDrag);
 }
@@ -845,15 +958,16 @@ function startRotate(e, elName) {
   e.preventDefault();
   e.stopPropagation();
   activeEl = elName;
-  renderCanvas();
+  const rotKey = elName === 'stamp' ? 'f_stamp_rotation' : elName === 'postmark' ? 'f_postmark_rotation' : null;
   dragState = {
     el: elName,
     type: 'rotate',
-    startX: e.clientX,
-    startY: e.clientY,
-    currentX: e.clientX,
-    currentY: e.clientY
+    startMouseX: e.clientX,
+    startVal: parseInt(document.getElementById(rotKey)?.value) || 0,
+    rotKey: rotKey,
+    rafId: null
   };
+  renderCanvas();
   document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', stopDrag);
 }
@@ -862,17 +976,48 @@ function startResize(e, elName, corner) {
   e.preventDefault();
   e.stopPropagation();
   activeEl = elName;
+  if (elName === 'stamp' || elName === 'postmark') {
+    const scaleKey = elName === 'stamp' ? 'f_stamp_scale' : 'f_postmark_scale';
+    const curScale = parseInt(document.getElementById(scaleKey)?.value) || 100;
+    dragState = {
+      el: elName,
+      type: 'resize',
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startVal: curScale,
+      isStamp: true,
+      rafId: null
+    };
+  } else if (elName === 'message') {
+    const curW = parseInt(document.getElementById('f_message_w')?.value) || 80;
+    const curH = parseInt(document.getElementById('f_message_h')?.value) || 80;
+    dragState = {
+      el: elName,
+      type: 'resize',
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startW: curW,
+      startH: curH,
+      isMsg: true,
+      rafId: null
+    };
+  } else {
+    const wKey = `f_${elName}_w`;
+    const hKey = `f_${elName}_h`;
+    const curW = parseInt(document.getElementById(wKey)?.value) || 120;
+    const curH = parseInt(document.getElementById(hKey)?.value) || 28;
+    dragState = {
+      el: elName,
+      type: 'resize',
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startW: curW,
+      startH: curH,
+      isBox: true,
+      rafId: null
+    };
+  }
   renderCanvas();
-  const scaleKey = elName === 'stamp' ? 'f_stamp_scale' : 'f_postmark_scale';
-  const curScale = parseInt(document.getElementById(scaleKey)?.value) || 100;
-  dragState = {
-    el: elName,
-    type: 'resize',
-    startX: e.clientX,
-    startY: e.clientY,
-    startScale: curScale,
-    corner: corner
-  };
   document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', stopDrag);
 }
@@ -881,8 +1026,6 @@ function onDrag(e) {
   if (!dragState) return;
   const overlay = document.getElementById('canvasOverlay');
   const rect = overlay.getBoundingClientRect();
-  const dx = (e.clientX - dragState.startX) / canvasZoom;
-  const dy = (e.clientY - dragState.startY) / canvasZoom;
 
   const elName = dragState.el;
   const xKey = elName === 'stamp' ? 'f_stamp_x' : elName === 'postmark' ? 'f_postmark_x' : `f_${elName}_x`;
@@ -890,14 +1033,13 @@ function onDrag(e) {
   const rotKey = elName === 'stamp' ? 'f_stamp_rotation' : elName === 'postmark' ? 'f_postmark_rotation' : null;
 
   if (dragState.type === 'move') {
-    const pctX = dx / rect.width * 100;
-    const pctY = dy / rect.height * 100;
-    let curX = parseFloat(document.getElementById(xKey)?.value) || 0;
-    let curY = parseFloat(document.getElementById(yKey)?.value) || 0;
-    let newX = curX + pctX;
-    let newY = curY + pctY;
+    const totalDx = e.clientX - dragState.startMouseX;
+    const totalDy = e.clientY - dragState.startMouseY;
+    const pctX = totalDx / rect.width * 100;
+    const pctY = totalDy / rect.height * 100;
+    let newX = dragState.startValX + pctX;
+    let newY = dragState.startValY + pctY;
 
-    // Smart snap: grid lines (when grid visible)
     const SNAP = 3;
     if (showGrid) {
       for (let g = 0; g <= 100; g += 10) {
@@ -905,7 +1047,6 @@ function onDrag(e) {
         if (Math.abs(newY - g) < SNAP) newY = g;
       }
     }
-    // Snap to other elements
     const others = ['from','to','message','stamp','postmark'].filter(e => e !== elName);
     for (const other of others) {
       const oxKey = other === 'stamp' ? 'f_stamp_x' : other === 'postmark' ? 'f_postmark_x' : `f_${other}_x`;
@@ -920,35 +1061,66 @@ function onDrag(e) {
     newY = Math.round(Math.max(0, Math.min(100, newY)));
     if (document.getElementById(xKey)) document.getElementById(xKey).value = newX;
     if (document.getElementById(yKey)) document.getElementById(yKey).value = newY;
+
   } else if (dragState.type === 'rotate' && rotKey) {
-    const totalDx = (e.clientX - dragState.currentX);
-    const curRot = parseInt(document.getElementById(rotKey)?.value) || 0;
-    if (document.getElementById(rotKey)) document.getElementById(rotKey).value = Math.round(Math.max(-180, Math.min(180, curRot + totalDx * 0.3)));
+    const totalDx = e.clientX - dragState.startMouseX;
+    let newRot = Math.round(dragState.startVal + totalDx * 0.3);
+    newRot = Math.max(-180, Math.min(180, newRot));
+    if (document.getElementById(rotKey)) document.getElementById(rotKey).value = newRot;
+
   } else if (dragState.type === 'resize') {
-    const scaleKey = dragState.el === 'stamp' ? 'f_stamp_scale' : 'f_postmark_scale';
-    const deltaX = (e.clientX - dragState.startX) / canvasZoom;
-    const deltaY = (e.clientY - dragState.startY) / canvasZoom;
-    const delta = Math.max(deltaX, deltaY) * 0.5;
-    let newScale = Math.round(dragState.startScale + delta);
-    newScale = Math.max(50, Math.min(200, newScale));
-    const el = document.getElementById(scaleKey);
-    if (el) { el.value = newScale;
-      const valEl = document.getElementById(scaleKey === 'f_stamp_scale' ? 'f_stamp_scale_val' : 'f_pmk_scale_val');
-      if (valEl) valEl.textContent = newScale + '%';
+    if (dragState.isMsg) {
+      const overlay = document.getElementById('canvasOverlay');
+      const rect = overlay.getBoundingClientRect();
+      const deltaX = e.clientX - dragState.startMouseX;
+      const deltaY = e.clientY - dragState.startMouseY;
+      const pctDelta = deltaX / rect.width * 100;
+      let newW = Math.round(dragState.startW + pctDelta);
+      newW = Math.max(15, Math.min(100, newW));
+      let newH = Math.round(dragState.startH + deltaY);
+      newH = Math.max(30, Math.min(270, newH));
+      const wEl = document.getElementById('f_message_w');
+      const hEl = document.getElementById('f_message_h');
+      if (wEl) wEl.value = newW;
+      if (hEl) hEl.value = newH;
+    } else if (dragState.isBox) {
+      const deltaX = (e.clientX - dragState.startMouseX) / canvasZoom;
+      const deltaY = (e.clientY - dragState.startMouseY) / canvasZoom;
+      const newW = Math.max(50, Math.min(400, Math.round(dragState.startW + deltaX)));
+      const newH = Math.max(16, Math.min(200, Math.round(dragState.startH + deltaY)));
+      const wEl = document.getElementById(`f_${dragState.el}_w`);
+      const hEl = document.getElementById(`f_${dragState.el}_h`);
+      if (wEl) wEl.value = newW;
+      if (hEl) hEl.value = newH;
+    } else {
+      const scaleKey = dragState.el === 'stamp' ? 'f_stamp_scale' : 'f_postmark_scale';
+      const deltaX = (e.clientX - dragState.startMouseX) / canvasZoom;
+      const deltaY = (e.clientY - dragState.startMouseY) / canvasZoom;
+      const delta = Math.max(deltaX, deltaY) * 0.5;
+      let newScale = Math.round(dragState.startVal + delta);
+      newScale = Math.max(50, Math.min(200, newScale));
+      const el = document.getElementById(scaleKey);
+      if (el) { el.value = newScale;
+        const valEl = document.getElementById(scaleKey === 'f_stamp_scale' ? 'f_stamp_scale_val' : 'f_pmk_scale_val');
+        if (valEl) valEl.textContent = newScale + '%';
+      }
     }
   }
 
-  dragState.currentX = e.clientX;
-  dragState.currentY = e.clientY;
-  dragState.startX = e.clientX;
-  dragState.startY = e.clientY;
-  renderCanvas();
+  // Throttle render with requestAnimationFrame
+  if (!dragState.rafId) {
+    dragState.rafId = requestAnimationFrame(() => {
+      dragState.rafId = null;
+      renderCanvas();
+    });
+  }
 }
 
 function stopDrag() {
   dragState = null;
   document.removeEventListener('mousemove', onDrag);
   document.removeEventListener('mouseup', stopDrag);
+  renderCanvas();
 }
 
 // ============== ALIGNMENT ==============
@@ -989,13 +1161,29 @@ function alignAll(mode) {
 }
 
 // ============== ZOOM ==============
-function zoomCanvas(delta) {
-  canvasZoom = Math.max(0.3, Math.min(2, canvasZoom + delta));
-  renderCanvas();
+function computeFitScale() {
+  const wrap = document.getElementById('canvasWrap');
+  if (!wrap) return 1;
+  const cw = wrap.clientWidth - 40;
+  const ch = wrap.clientHeight - 40;
+  return Math.min(cw / 420, ch / 270, 2.5);
 }
+
+function applyCanvasZoom() {
+  canvasZoom = computeFitScale() + zoomOffset;
+  canvasZoom = Math.max(0.3, Math.min(3.0, canvasZoom));
+  const container = document.getElementById('canvasContainer');
+  if (container) container.style.transform = `scale(${canvasZoom})`;
+}
+
+function zoomCanvas(delta) {
+  zoomOffset += delta;
+  applyCanvasZoom();
+}
+
 function resetZoom() {
-  canvasZoom = 1;
-  renderCanvas();
+  zoomOffset = 0;
+  applyCanvasZoom();
 }
 
 function toggleGrid() {
@@ -1003,6 +1191,105 @@ function toggleGrid() {
   const btn = document.getElementById('gridBtn');
   if (btn) { btn.classList.toggle('btn-primary', showGrid); btn.classList.toggle('btn-outline', !showGrid); }
   renderCanvas();
+}
+
+// ============== BATCH SELECT & DELETE ==============
+function toggleSelect(id) {
+  if (selectedIds.has(id)) { selectedIds.delete(id); }
+  else { selectedIds.add(id); }
+  render(cachedItems);
+}
+
+function toggleSelectAll() {
+  const check = document.getElementById('selectAllCheck');
+  if (check.checked) {
+    cachedItems.forEach(item => selectedIds.add(item.id));
+  } else {
+    selectedIds.clear();
+  }
+  render(cachedItems);
+}
+
+function updateBatchBar() {
+  const bar = document.getElementById('batchBar');
+  const countEl = document.getElementById('batchCount');
+  const allCheck = document.getElementById('selectAllCheck');
+  if (!bar || !countEl) return;
+  if (selectedIds.size > 0) {
+    bar.classList.add('show');
+    countEl.textContent = `已选 ${selectedIds.size} 项`;
+    if (allCheck) allCheck.checked = cachedItems.length > 0 && cachedItems.every(item => selectedIds.has(item.id));
+  } else {
+    bar.classList.remove('show');
+    if (allCheck) allCheck.checked = false;
+  }
+}
+
+async function batchDelete() {
+  const ids = Array.from(selectedIds);
+  if (!ids.length) return;
+  if (!confirm(`确定要删除选中的 ${ids.length} 项吗？此操作不可撤销。`)) return;
+  try {
+    const resp = await api(`/api/materials/${currentTab}/batch-delete`, 'POST', { ids });
+    if (resp.success) {
+      toast(`已删除 ${resp.deleted} 项`, 'success');
+      selectedIds.clear();
+      await load(currentPage);
+    } else {
+      toast(resp.message || '删除失败', 'error');
+    }
+  } catch (e) { toast('删除失败: ' + e.message, 'error'); }
+}
+
+// ============== CLONE & SAVE AS ==============
+async function cloneItem() {
+  if (!selectedItem) { toast('请先在左侧选择要复制的素材', 'error'); return; }
+  const newId = generateAutoId();
+  const data = { ...selectedItem };
+  data.id = newId;
+  if (currentTab === 'templates') {
+    data.name = (data.name || '') + ' (副本)';
+  } else {
+    data.label = (data.label || '') + ' (副本)';
+  }
+  const path = currentTab==='templates'?'templates':currentTab==='stamps'?'stamps':'postmarks';
+  try {
+    await api(`/api/materials/${path}`, 'POST', data);
+    toast('复制成功: ' + newId, 'success');
+    await load(currentPage);
+    const newItem = cachedItems.find(i => i.id === newId);
+    if (newItem) {
+      selectedItem = newItem;
+      editingId = newId;
+      render(cachedItems);
+      showEditPanel();
+    }
+  } catch(e) { toast('复制失败: ' + e.message, 'error'); }
+}
+
+async function saveAsItem() {
+  const data = getFormData();
+  const newId = generateAutoId();
+  data.id = newId;
+  if (currentTab === 'templates') {
+    data.name = (data.name || '') + ' (副本)';
+  } else {
+    data.label = (data.label || '') + ' (副本)';
+  }
+  const path = currentTab==='templates'?'templates':currentTab==='stamps'?'stamps':'postmarks';
+  try {
+    await api(`/api/materials/${path}`, 'POST', data);
+    editingId = newId;
+    document.getElementById('f_id').value = newId;
+    if (currentTab === 'templates') {
+      document.getElementById('f_name').value = data.name || '';
+    } else {
+      document.getElementById('f_label').value = data.label || '';
+    }
+    document.getElementById('editTitle').textContent = '编辑素材';
+    toast('另存为成功: ' + newId, 'success');
+    load(currentPage);
+  } catch(e) { toast('另存为失败: ' + e.message, 'error'); }
 }
 
 // ============== IMAGE HANDLING ==============
@@ -1089,6 +1376,7 @@ async function seedData(){
 async function switchTab(tab){
   await autoSave();
   currentTab=tab;editingId=null;selectedItem=null;currentPage=1;canvasZoom=1;
+  selectedIds.clear();
   hideEditPanel();
   document.querySelectorAll('.tab').forEach((t,i)=>{const tabs=['templates','stamps','postmarks'];t.classList.toggle('active',tabs[i]===tab)});
   load(1);
@@ -1143,7 +1431,13 @@ document.addEventListener('keydown', function(e) {
   renderCanvas();
 });
 
+// Resize observer to update fit scale
+window.addEventListener('resize', () => {
+  applyCanvasZoom();
+});
+
 // Initialize
+applyCanvasZoom();
 load(1);
 </script>
 </body>

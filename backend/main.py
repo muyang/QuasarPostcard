@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 import os.path as osp
 
 from database import engine, Base
@@ -49,6 +50,19 @@ with engine.connect() as conn:
         ("postmark_y", "INTEGER DEFAULT 45"),
         ("postmark_rotation", "INTEGER DEFAULT 0"),
         ("postmark_scale", "INTEGER DEFAULT 100"),
+        ("message_h", "INTEGER DEFAULT 80"),
+        ("from_w", "INTEGER DEFAULT 120"),
+        ("from_h", "INTEGER DEFAULT 28"),
+        ("to_w", "INTEGER DEFAULT 120"),
+        ("to_h", "INTEGER DEFAULT 28"),
+        ("from_border_color", "VARCHAR(16) DEFAULT 'CCCCCC'"),
+        ("to_border_color", "VARCHAR(16) DEFAULT 'CCCCCC'"),
+        ("from_border_width", "INTEGER DEFAULT 0"),
+        ("to_border_width", "INTEGER DEFAULT 0"),
+        ("from_bg_color", "VARCHAR(16) DEFAULT 'FFFFFF'"),
+        ("to_bg_color", "VARCHAR(16) DEFAULT 'FFFFFF'"),
+        ("from_bg_opacity", "INTEGER DEFAULT 0"),
+        ("to_bg_opacity", "INTEGER DEFAULT 0"),
     ]
     for col_name, col_type in template_new_cols:
         try:
@@ -81,15 +95,53 @@ app.include_router(upload_router)
 app.include_router(materials_router)
 app.include_router(admin_page_router)
 
+class ImageCORSHandler(BaseHTTPMiddleware):
+    """Ensure all responses (including static files) have CORS headers for CanvasKit image loading."""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Timing-Allow-Origin"] = "*"
+        return response
+
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Serve Flutter Web app static files
 app.mount("/app-assets", StaticFiles(directory=_find_app_dir()), name="app_assets")
 
+app.add_middleware(ImageCORSHandler)
+
 
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/images/{file_path:path}")
+async def serve_image(file_path: str, size: str = ""):
+    """Serve static images with explicit CORS and cache headers.
+    Routes through API layer so CORSMiddleware + ImageCORSHandler both apply,
+    and we can set Cache-Control to prevent stale-cache issues on mobile.
+    Supports ?size=thumb (200px) or ?size=small (600px) for thumbnails."""
+    full_path = osp.join("static", file_path)
+
+    # Thumbnail support: /api/images/cards/abc.png?size=thumb -> static/cards/abc_thumb.png
+    if size in ("thumb", "small"):
+        base_dir = osp.dirname(full_path)
+        base_name = osp.basename(full_path)
+        stem, ext = osp.splitext(base_name)
+        thumb_path = osp.join(base_dir, f"{stem}_{size}{ext}")
+        if osp.isfile(thumb_path):
+            full_path = thumb_path
+
+    if not osp.isfile(full_path):
+        from fastapi import HTTPException
+        raise HTTPException(404)
+    return FileResponse(full_path, headers={
+        "Cache-Control": "public, max-age=86400",
+        "Access-Control-Allow-Origin": "*",
+        "Timing-Allow-Origin": "*",
+    })
 
 
 # Catch-all: serve Flutter SPA for all non-API paths (must be last)

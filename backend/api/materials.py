@@ -19,9 +19,14 @@ def _template_dict(r):
         "from_color": r.from_color, "to_color": r.to_color, "message_color": r.message_color,
         "from_size": r.from_size, "to_size": r.to_size, "message_size": r.message_size,
         "from_x": r.from_x, "from_y": r.from_y, "to_x": r.to_x, "to_y": r.to_y,
-        "message_x": r.message_x, "message_y": r.message_y, "message_w": r.message_w,
+        "message_x": r.message_x, "message_y": r.message_y, "message_w": r.message_w, "message_h": r.message_h,
         "stamp_x": r.stamp_x, "stamp_y": r.stamp_y, "stamp_rotation": r.stamp_rotation, "stamp_scale": r.stamp_scale,
         "postmark_x": r.postmark_x, "postmark_y": r.postmark_y, "postmark_rotation": r.postmark_rotation, "postmark_scale": r.postmark_scale,
+        "from_w": r.from_w, "from_h": r.from_h, "to_w": r.to_w, "to_h": r.to_h,
+        "from_border_color": r.from_border_color, "to_border_color": r.to_border_color,
+        "from_border_width": r.from_border_width, "to_border_width": r.to_border_width,
+        "from_bg_color": r.from_bg_color, "to_bg_color": r.to_bg_color,
+        "from_bg_opacity": r.from_bg_opacity, "to_bg_opacity": r.to_bg_opacity,
     }
 
 def _stamp_dict(r):
@@ -38,9 +43,12 @@ TEMPLATE_FIELDS = [
     "image_url", "status",
     "from_font", "to_font", "message_font", "from_color", "to_color", "message_color",
     "from_size", "to_size", "message_size", "from_x", "from_y", "to_x", "to_y",
-    "message_x", "message_y", "message_w",
+    "message_x", "message_y", "message_w", "message_h",
     "stamp_x", "stamp_y", "stamp_rotation", "stamp_scale",
     "postmark_x", "postmark_y", "postmark_rotation", "postmark_scale",
+    "from_w", "from_h", "to_w", "to_h",
+    "from_border_color", "to_border_color", "from_border_width", "to_border_width",
+    "from_bg_color", "to_bg_color", "from_bg_opacity", "to_bg_opacity",
 ]
 
 @router.get("/templates")
@@ -101,6 +109,16 @@ def delete_template(tid: str, db: Session = Depends(get_db), _: str = Depends(ve
     return JSONResponse(content={"success": True}, headers=NO_CACHE)
 
 
+@router.post("/templates/batch-delete")
+def batch_delete_templates(data: dict, db: Session = Depends(get_db), _: str = Depends(verify_admin)):
+    ids = data.get("ids", [])
+    if not ids:
+        return JSONResponse(content={"success": False, "message": "未提供ID"}, headers=NO_CACHE)
+    deleted = db.query(PostcardTemplate).filter(PostcardTemplate.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    return JSONResponse(content={"success": True, "deleted": deleted}, headers=NO_CACHE)
+
+
 # ======== Stamps ========
 
 @router.get("/stamps")
@@ -152,6 +170,16 @@ def delete_stamp(sid: str, db: Session = Depends(get_db), _: str = Depends(verif
     db.query(PostcardStamp).filter(PostcardStamp.id == sid).delete()
     db.commit()
     return JSONResponse(content={"success": True}, headers=NO_CACHE)
+
+
+@router.post("/stamps/batch-delete")
+def batch_delete_stamps(data: dict, db: Session = Depends(get_db), _: str = Depends(verify_admin)):
+    ids = data.get("ids", [])
+    if not ids:
+        return JSONResponse(content={"success": False, "message": "未提供ID"}, headers=NO_CACHE)
+    deleted = db.query(PostcardStamp).filter(PostcardStamp.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    return JSONResponse(content={"success": True, "deleted": deleted}, headers=NO_CACHE)
 
 
 # ======== Postmarks ========
@@ -206,6 +234,16 @@ def delete_postmark(pid: str, db: Session = Depends(get_db), _: str = Depends(ve
     db.query(PostcardPostmark).filter(PostcardPostmark.id == pid).delete()
     db.commit()
     return JSONResponse(content={"success": True}, headers=NO_CACHE)
+
+
+@router.post("/postmarks/batch-delete")
+def batch_delete_postmarks(data: dict, db: Session = Depends(get_db), _: str = Depends(verify_admin)):
+    ids = data.get("ids", [])
+    if not ids:
+        return JSONResponse(content={"success": False, "message": "未提供ID"}, headers=NO_CACHE)
+    deleted = db.query(PostcardPostmark).filter(PostcardPostmark.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    return JSONResponse(content={"success": True, "deleted": deleted}, headers=NO_CACHE)
 
 
 # ======== Seed ========

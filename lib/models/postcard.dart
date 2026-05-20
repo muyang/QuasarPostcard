@@ -39,6 +39,7 @@ class PostcardTemplate {
   final double messageX;
   final double messageY;
   final double messageW;
+  final double messageH;
 
   // Stamp position & transform
   final double stampX;
@@ -51,6 +52,20 @@ class PostcardTemplate {
   final double postmarkY;
   final double postmarkRotation;
   final double postmarkScale;
+
+  // From/To box styling
+  final double fromW;
+  final double fromH;
+  final double toW;
+  final double toH;
+  final Color fromBorderColor;
+  final Color toBorderColor;
+  final double fromBorderWidth;
+  final double toBorderWidth;
+  final Color fromBgColor;
+  final Color toBgColor;
+  final double fromBgOpacity;
+  final double toBgOpacity;
 
   const PostcardTemplate({
     required this.id,
@@ -76,6 +91,7 @@ class PostcardTemplate {
     this.messageX = 10,
     this.messageY = 60,
     this.messageW = 80,
+    this.messageH = 80,
     this.stampX = 78,
     this.stampY = 5,
     this.stampRotation = 0,
@@ -84,6 +100,18 @@ class PostcardTemplate {
     this.postmarkY = 45,
     this.postmarkRotation = 0,
     this.postmarkScale = 100,
+    this.fromW = 120,
+    this.fromH = 28,
+    this.toW = 120,
+    this.toH = 28,
+    this.fromBorderColor = const Color(0xFFCCCCCC),
+    this.toBorderColor = const Color(0xFFCCCCCC),
+    this.fromBorderWidth = 0,
+    this.toBorderWidth = 0,
+    this.fromBgColor = const Color(0xFFFFFFFF),
+    this.toBgColor = const Color(0xFFFFFFFF),
+    this.fromBgOpacity = 0,
+    this.toBgOpacity = 0,
   });
 
   factory PostcardTemplate.fromJson(Map<String, dynamic> json) {
@@ -115,6 +143,7 @@ class PostcardTemplate {
       messageX: (json['message_x'] ?? 10).toDouble(),
       messageY: (json['message_y'] ?? 60).toDouble(),
       messageW: (json['message_w'] ?? 80).toDouble(),
+      messageH: (json['message_h'] ?? 80).toDouble(),
       stampX: (json['stamp_x'] ?? 78).toDouble(),
       stampY: (json['stamp_y'] ?? 5).toDouble(),
       stampRotation: (json['stamp_rotation'] ?? 0).toDouble(),
@@ -123,6 +152,26 @@ class PostcardTemplate {
       postmarkY: (json['postmark_y'] ?? 45).toDouble(),
       postmarkRotation: (json['postmark_rotation'] ?? 0).toDouble(),
       postmarkScale: (json['postmark_scale'] ?? 100).toDouble(),
+      fromW: (json['from_w'] ?? 120).toDouble(),
+      fromH: (json['from_h'] ?? 28).toDouble(),
+      toW: (json['to_w'] ?? 120).toDouble(),
+      toH: (json['to_h'] ?? 28).toDouble(),
+      fromBorderColor: _parseColor(json['from_border_color'], 'CCCCCC'),
+      toBorderColor: _parseColor(json['to_border_color'], 'CCCCCC'),
+      fromBorderWidth: (json['from_border_width'] ?? 0).toDouble(),
+      toBorderWidth: (json['to_border_width'] ?? 0).toDouble(),
+      fromBgColor: _parseColor(json['from_bg_color'], 'FFFFFF'),
+      toBgColor: _parseColor(json['to_bg_color'], 'FFFFFF'),
+      fromBgOpacity: (json['from_bg_opacity'] ?? 0).toDouble(),
+      toBgOpacity: (json['to_bg_opacity'] ?? 0).toDouble(),
+    );
+  }
+
+  factory PostcardTemplate.empty() {
+    return PostcardTemplate(
+      id: '__empty__',
+      name: '加载中...',
+      gradientColors: [const Color(0xFFF5F5F5), const Color(0xFFEEEEEE), const Color(0xFFE0E0E0)],
     );
   }
 }
@@ -171,26 +220,6 @@ const POSTCARD_TEMPLATES = [
     decorationPattern: 'ocean',
     fromColor: Color(0xFF1A3A5C), toColor: Color(0xFF1A3A5C), messageColor: Color(0xFF2A4A6C),
   ),
-];
-
-// ======== Theme Colors ========
-
-class ThemeColorOption {
-  final Color color;
-  final String name;
-
-  const ThemeColorOption({required this.color, required this.name});
-}
-
-const THEME_COLORS = [
-  ThemeColorOption(color: Color(0xFFE91E63), name: '玫红'),
-  ThemeColorOption(color: Color(0xFF4CAF50), name: '翠绿'),
-  ThemeColorOption(color: Color(0xFF2196F3), name: '海蓝'),
-  ThemeColorOption(color: Color(0xFFFF9800), name: '暖橙'),
-  ThemeColorOption(color: Color(0xFF9C27B0), name: '紫罗兰'),
-  ThemeColorOption(color: Color(0xFF607D8B), name: '灰蓝'),
-  ThemeColorOption(color: Color(0xFF795548), name: '棕色'),
-  ThemeColorOption(color: Color(0xFFF44336), name: '红色'),
 ];
 
 // ======== Stamps ========
@@ -292,9 +321,9 @@ class PostcardDesign {
   int id;
   String status;
 
-  List<PostcardTemplate> _templates = POSTCARD_TEMPLATES;
-  List<PostcardStamp> _stamps = POSTCARD_STAMPS;
-  List<PostcardPostmark> _postmarks = POSTCARD_POSTMARKS;
+  List<PostcardTemplate> _templates = [];
+  List<PostcardStamp> _stamps = [];
+  List<PostcardPostmark> _postmarks = [];
 
   void updateMaterials({
     List<PostcardTemplate>? templates,
@@ -323,8 +352,10 @@ class PostcardDesign {
     this.status = 'PENDING',
   });
 
-  PostcardTemplate get template =>
-      _templates.firstWhere((t) => t.id == templateId, orElse: () => _templates[0]);
+  PostcardTemplate get template {
+    if (_templates.isEmpty) return PostcardTemplate.empty();
+    return _templates.firstWhere((t) => t.id == templateId, orElse: () => _templates[0]);
+  }
 
   PostcardStamp? get stamp =>
       stampId != null ? _stamps.cast<PostcardStamp?>().firstWhere((s) => s!.id == stampId, orElse: () => null) : null;

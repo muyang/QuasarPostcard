@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,10 +36,31 @@ class ApiService {
         if (_token.isNotEmpty) 'Authorization': 'Bearer $_token',
       };
 
-  static String imageUrl(String? path) {
+  static String imageUrl(String? path, {String? size}) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
-    return '$_baseUrl$path';
+    // Route static files through the API image proxy for reliable CORS headers
+    var url = '';
+    if (path.startsWith('/static/')) {
+      url = '$_baseUrl/api/images/${path.substring(8)}';
+    } else {
+      url = '$_baseUrl$path';
+    }
+    if (size != null && (size == 'thumb' || size == 'small')) {
+      final sep = url.contains('?') ? '&' : '?';
+      url = '$url$sep size=$size';
+    }
+    return url;
+  }
+
+  static Future<Uint8List?> fetchImageBytes(String url) async {
+    try {
+      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+        return resp.bodyBytes;
+      }
+    } catch (_) {}
+    return null;
   }
 
   // ========== Auth ==========
@@ -118,6 +140,19 @@ class ApiService {
     if (resp.statusCode != 200) {
       throw Exception('Failed: ${resp.statusCode}');
     }
+  }
+
+  static Future<int> batchDeletePostcards(List<int> ids) async {
+    final resp = await http.post(
+      Uri.parse('$_baseUrl/api/postcards/batch-delete'),
+      headers: _headers,
+      body: jsonEncode({'ids': ids}),
+    );
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['deleted'] ?? 0;
+    }
+    throw Exception('Failed: ${resp.statusCode}');
   }
 
   // ========== Materials ==========

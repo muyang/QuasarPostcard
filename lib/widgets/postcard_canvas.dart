@@ -2,10 +2,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/postcard.dart';
 import '../services/api_service.dart';
+import 'app_image.dart';
 
 class PostcardCanvas extends StatelessWidget {
   final PostcardDesign design;
   final bool showStampAnimation;
+
+  static const double canvasW = 420.0;
+  static const double canvasH = 270.0;
 
   const PostcardCanvas({
     super.key,
@@ -31,232 +35,195 @@ class PostcardCanvas extends StatelessWidget {
           w = maxW;
           h = w / PostcardDesign.aspectRatio;
         }
+        final s = w / canvasW;
 
         return Center(
           child: Container(
             width: w,
             height: h,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(template.cornerRadius),
+              borderRadius: BorderRadius.circular(template.cornerRadius * s),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 8)),
-                BoxShadow(color: design.themeColor.withOpacity(0.08), blurRadius: 40, offset: const Offset(0, 0)),
+                BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 24 * s, offset: Offset(0, 8 * s)),
+                BoxShadow(color: Colors.white.withOpacity(0.05), blurRadius: 40 * s, offset: const Offset(0, 0)),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(template.cornerRadius),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: template.gradientColors,
+              borderRadius: BorderRadius.circular(template.cornerRadius * s),
+              child: FittedBox(
+                fit: BoxFit.fill,
+                child: SizedBox(
+                  width: canvasW,
+                  height: canvasH,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: template.gradientColors,
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                      if (template.imageUrl != null && template.imageUrl!.isNotEmpty)
+                        Positioned.fill(
+                          child: AppImage(
+                            url: template.imageUrl,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+
+                      _buildDecoration(template),
+
+                      // Stamp
+                      _stampElement(template, stamp),
+
+                      // Postmark (after stamp = on top)
+                      _postmarkElement(template, postmark),
+
+                      // To field
+                      _textElement('收件人', design.toName, template.toColor, template.toFont, template.toSize, template.toX, template.toY, template.toW, template.toH, template.toBorderColor, template.toBorderWidth, template.toBgColor, template.toBgOpacity, design.toName.isEmpty),
+
+                      // From field
+                      _textElement('寄件人', design.fromName, template.fromColor, template.fromFont, template.fromSize, template.fromX, template.fromY, template.fromW, template.fromH, template.fromBorderColor, template.fromBorderWidth, template.fromBgColor, template.fromBgOpacity, design.fromName.isEmpty),
+
+                      // Message
+                      _messageElement(template, design.message),
+                    ],
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    // Template image as background
-                    if (template.imageUrl != null && template.imageUrl!.isNotEmpty)
-                      Positioned.fill(
-                        child: Image.network(
-                          ApiService.imageUrl(template.imageUrl),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                        ),
-                      ),
-
-                    // Decorative pattern
-                    _buildDecoration(template),
-
-                    // Inner border with theme color
-                    Positioned(
-                      left: 12, top: 12, right: 12, bottom: 12,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(template.cornerRadius - 2),
-                          border: Border.all(color: design.themeColor.withOpacity(0.35), width: 1),
-                        ),
-                      ),
-                    ),
-
-                    // Stamp
-                    Positioned(
-                      left: w * template.stampX / 100 - 24 * template.stampScale / 100,
-                      top: h * template.stampY / 100 - 28 * template.stampScale / 100,
-                      child: stamp != null
-                          ? _buildStamp(stamp, showStampAnimation, template.stampScale, template.stampRotation)
-                          : Transform.scale(
-                              scale: template.stampScale / 100,
-                              child: _buildStampPlaceholder(),
-                            ),
-                    ),
-
-                    // Postmark (rendered after stamp so it appears on top)
-                    Positioned(
-                      left: w * template.postmarkX / 100 - 40 * template.postmarkScale / 100,
-                      top: h * template.postmarkY / 100 - 40 * template.postmarkScale / 100,
-                      child: Transform.scale(
-                        scale: template.postmarkScale / 100,
-                        child: postmark != null
-                            ? _buildPostmark(postmark, design.themeColor, stamp, template)
-                            : _buildPostmarkPlaceholder(),
-                      ),
-                    ),
-
-                    // Header line
-                    Positioned(
-                      left: w * 0.06, top: h * 0.04, right: w * 0.06,
-                      child: _headerLine(design.themeColor),
-                    ),
-
-                    // To field (centered on position to match admin canvas)
-                    Positioned(
-                      left: w * template.toX / 100,
-                      top: h * template.toY / 100,
-                      child: FractionalTranslation(
-                        translation: const Offset(-0.5, -0.5),
-                        child: _addressLine('To:', design.toName, template.toColor, design.toName.isEmpty, fontSize: template.toSize, fontFamily: template.toFont),
-                      ),
-                    ),
-
-                    // From field (centered on position to match admin canvas)
-                    Positioned(
-                      left: w * template.fromX / 100,
-                      top: h * template.fromY / 100,
-                      child: FractionalTranslation(
-                        translation: const Offset(-0.5, -0.5),
-                        child: _addressLine('From:', design.fromName, template.fromColor, design.fromName.isEmpty, fontSize: template.fromSize, fontFamily: template.fromFont),
-                      ),
-                    ),
-
-                    // Message body (vertically centered on position like admin canvas)
-                    Positioned(
-                      left: w * template.messageX / 100,
-                      top: h * template.messageY / 100,
-                      width: w * template.messageW / 100,
-                      bottom: h * (1 - template.fromY / 100) - 4,
-                      child: design.message.isNotEmpty
-                          ? Text(
-                              design.message,
-                              style: TextStyle(
-                                fontSize: template.messageSize,
-                                color: template.messageColor,
-                                height: 1.5,
-                                fontStyle: FontStyle.italic,
-                                fontFamily: template.messageFont,
-                              ),
-                            )
-                          : Center(
-                              child: Text(
-                                '书写你的祝福…',
-                                style: TextStyle(fontSize: template.messageSize, color: Colors.black26, fontStyle: FontStyle.italic, fontFamily: template.messageFont),
-                              ),
-                            ),
-                    ),
-                  ],
                 ),
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }
 
-  Widget _headerLine(Color color) {
-    return Row(
-      children: [
-        Container(width: 36, height: 2, color: color.withOpacity(0.6)),
-        const SizedBox(width: 8),
-        Icon(Icons.mail_outline, size: 16, color: color.withOpacity(0.6)),
-        const Spacer(),
-        Container(width: 36, height: 2, color: color.withOpacity(0.6)),
-      ],
-    );
-  }
+  // ======== Element builders ========
 
-  Widget _addressLine(String label, String name, Color color, bool isEmpty, {double fontSize = 14, String fontFamily = 'sans-serif'}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600, color: color, fontFamily: fontFamily)),
-        const SizedBox(width: 8),
-        if (isEmpty)
-          Container(
-            width: 80,
-            height: fontSize + 4,
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: color.withOpacity(0.3), width: 1)),
-            ),
-          )
-        else
-          Text(name, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w500, color: color, fontFamily: fontFamily)),
-      ],
-    );
-  }
+  Widget _stampElement(PostcardTemplate template, PostcardStamp? stamp) {
+    final stScl = template.stampScale / 100;
+    final stW = 52.0 * stScl;
+    final stH = 62.0 * stScl;
+    final rotRad = template.stampRotation * 3.14159 / 180;
 
-  Widget _buildStamp(PostcardStamp stamp, bool animate, double scale, double rotation) {
-    return AnimatedScale(
-      scale: 1.0,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.elasticOut,
-      child: AnimatedRotation(
-        turns: 0.0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutBack,
-        child: Transform.rotate(
-          angle: rotation * 3.14159 / 180,
-          child: Transform.scale(
-            scale: scale / 100,
-            child: stamp.imageUrl != null && stamp.imageUrl!.isNotEmpty
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: Image.network(ApiService.imageUrl(stamp.imageUrl), width: 48, height: 56, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Text(stamp.emoji, style: const TextStyle(fontSize: 24))),
-                  )
-                : Text(stamp.emoji, style: const TextStyle(fontSize: 24)),
-          ),
+    final content = stamp != null
+        ? (stamp.imageUrl != null && stamp.imageUrl!.isNotEmpty
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: AppImage(url: stamp.imageUrl, width: stW, height: stH, fit: BoxFit.cover, errorWidget: () => Text(stamp.emoji, style: TextStyle(fontSize: stScl * 22))),
+              )
+            : Center(child: Text(stamp.emoji, style: TextStyle(fontSize: stScl * 22))))
+        : SizedBox(width: stW, height: stH, child: CustomPaint(painter: _DashedRectPainter()));
+
+    return Positioned(
+      left: canvasW * template.stampX / 100,
+      top: canvasH * template.stampY / 100,
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, -0.5),
+        child: Transform(
+          transform: Matrix4.rotationZ(rotRad),
+          origin: Offset(stW / 2, stH / 2),
+          child: content,
         ),
       ),
     );
   }
 
-  Widget _buildPostmark(PostcardPostmark postmark, Color themeColor, PostcardStamp? stamp, PostcardTemplate template) {
-    final size = 80.0;
+  Widget _postmarkElement(PostcardTemplate template, PostcardPostmark? postmark) {
+    final pmkScl = template.postmarkScale / 100;
+    final pmkSize = 72.0 * pmkScl;
+    final rotRad = template.postmarkRotation * 3.14159 / 180;
+
     Widget inner;
-    if (postmark.imageUrl != null && postmark.imageUrl!.isNotEmpty) {
-      inner = SizedBox(
-        width: size,
-        height: size,
-        child: Image.network(ApiService.imageUrl(postmark.imageUrl), width: size, height: size, fit: BoxFit.contain, errorBuilder: (_, __, ___) => _buildDefaultPostmark(postmark, size)),
-      );
+    if (postmark != null) {
+      if (postmark.imageUrl != null && postmark.imageUrl!.isNotEmpty) {
+        inner = SizedBox(
+          width: pmkSize,
+          height: pmkSize,
+          child: AppImage(url: postmark.imageUrl, width: pmkSize, height: pmkSize, fit: BoxFit.contain, errorWidget: () => _buildDefaultPostmark(postmark, pmkSize)),
+        );
+      } else {
+        inner = _buildDefaultPostmark(postmark, pmkSize);
+      }
     } else {
-      inner = _buildDefaultPostmark(postmark, size);
+      inner = SizedBox(width: pmkSize, height: pmkSize, child: CustomPaint(painter: _DashedCirclePainter()));
     }
-    return Transform.rotate(
-      angle: template.postmarkRotation * 3.14159 / 180,
-      child: inner,
-    );
-  }
 
-  Widget _buildPostmarkPlaceholder() {
-    return SizedBox(
-      width: 80,
-      height: 80,
-      child: CustomPaint(
-        painter: _DashedCirclePainter(),
+    return Positioned(
+      left: canvasW * template.postmarkX / 100,
+      top: canvasH * template.postmarkY / 100,
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, -0.5),
+        child: Transform(
+          transform: Matrix4.rotationZ(rotRad),
+          origin: Offset(pmkSize / 2, pmkSize / 2),
+          child: inner,
+        ),
       ),
     );
   }
 
-  Widget _buildStampPlaceholder() {
-    return SizedBox(
-      width: 48,
-      height: 56,
-      child: CustomPaint(
-        painter: _DashedRectPainter(),
+  Widget _textElement(String placeholder, String name, Color color, String fontFamily, double fontSize, double xPct, double yPct, double boxW, double boxH, Color borderColor, double borderWidth, Color bgColor, double bgOpacity, bool isEmpty) {
+    final bg = bgColor.withOpacity(bgOpacity / 100);
+    return Positioned(
+      left: canvasW * xPct / 100,
+      top: canvasH * yPct / 100,
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, -0.5),
+        child: Container(
+          width: boxW,
+          height: boxH,
+          decoration: BoxDecoration(
+            color: bg,
+            border: isEmpty
+                ? Border.all(color: color.withOpacity(0.3), width: 1)
+                : (borderWidth > 0 ? Border.all(color: borderColor, width: borderWidth) : null),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          alignment: Alignment.centerLeft,
+          child: isEmpty
+              ? Text(placeholder, style: TextStyle(fontSize: fontSize, color: color.withOpacity(0.35), fontFamily: fontFamily))
+              : Text(name, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w500, color: color, fontFamily: fontFamily)),
+        ),
       ),
     );
   }
+
+  Widget _messageElement(PostcardTemplate template, String message) {
+    return Positioned(
+      left: canvasW * template.messageX / 100,
+      top: canvasH * template.messageY / 100,
+      width: canvasW * template.messageW / 100,
+      height: template.messageH,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        alignment: Alignment.topLeft,
+        child: design.message.isNotEmpty
+            ? Text(
+                design.message,
+                maxLines: null,
+                overflow: TextOverflow.clip,
+                style: TextStyle(
+                  fontSize: template.messageSize,
+                  color: template.messageColor,
+                  height: 1.5,
+                  fontStyle: FontStyle.italic,
+                  fontFamily: template.messageFont,
+                ),
+              )
+            : Text(
+                '祝福语',
+                style: TextStyle(fontSize: template.messageSize, color: Colors.black26, fontStyle: FontStyle.italic, fontFamily: template.messageFont),
+              ),
+      ),
+    );
+  }
+
+  // ======== Shared helpers ========
 
   Widget _buildDefaultPostmark(PostcardPostmark postmark, double size) {
     return SizedBox(
@@ -271,55 +238,23 @@ class PostcardCanvas extends StatelessWidget {
     );
   }
 
+  // ======== Decorations ========
+
   Widget _buildDecoration(PostcardTemplate template) {
     switch (template.decorationPattern) {
       case 'floral':
-        return _floralDecoration();
+        return const Positioned(top: 10, right: 14, child: Opacity(opacity: 0.25, child: Text('🌸', style: TextStyle(fontSize: 22))));
       case 'geometric':
-        return _geometricDecoration();
+        return Positioned.fill(child: CustomPaint(painter: _GeometricPatternPainter()));
       case 'vintage':
-        return _vintageDecoration();
+        return const Positioned(top: 10, right: 14, child: Opacity(opacity: 0.25, child: Text('📮', style: TextStyle(fontSize: 22))));
       case 'nature':
-        return _natureDecoration();
+        return const Positioned(top: 10, right: 14, child: Opacity(opacity: 0.25, child: Text('🌿', style: TextStyle(fontSize: 22))));
       case 'ocean':
-        return _oceanDecoration();
+        return Positioned(bottom: 0, left: 0, right: 0, child: CustomPaint(painter: _WavePatternPainter(canvasW: canvasW)));
       default:
         return const SizedBox.shrink();
     }
-  }
-
-  Widget _floralDecoration() {
-    return const Positioned(
-      top: -20, right: -10,
-      child: Opacity(opacity: 0.15, child: Text('🌸', style: TextStyle(fontSize: 80))),
-    );
-  }
-
-  Widget _geometricDecoration() {
-    return Positioned.fill(
-      child: CustomPaint(painter: _GeometricPatternPainter()),
-    );
-  }
-
-  Widget _vintageDecoration() {
-    return const Positioned(
-      bottom: -15, left: -10,
-      child: Opacity(opacity: 0.12, child: Text('📮', style: TextStyle(fontSize: 70))),
-    );
-  }
-
-  Widget _natureDecoration() {
-    return const Positioned(
-      top: -15, left: -5,
-      child: Opacity(opacity: 0.12, child: Text('🌿', style: TextStyle(fontSize: 65))),
-    );
-  }
-
-  Widget _oceanDecoration() {
-    return Positioned(
-      bottom: 0, left: 0, right: 0,
-      child: CustomPaint(painter: _WavePatternPainter()),
-    );
   }
 }
 
@@ -341,14 +276,11 @@ class _PostmarkPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 6;
 
-    // Outer circle
     canvas.drawCircle(center, radius, paint);
 
-    // Inner circle
     paint.strokeWidth = 1.0;
     canvas.drawCircle(center, radius - 10, paint);
 
-    // Wavy lines between circles
     final wavePaint = Paint()
       ..color = color.withOpacity(0.5)
       ..style = PaintingStyle.stroke
@@ -364,7 +296,6 @@ class _PostmarkPainter extends CustomPainter {
       );
     }
 
-    // Date text in center
     final textPainter = TextPainter(
       text: TextSpan(
         text: dateText,
@@ -400,6 +331,10 @@ class _GeometricPatternPainter extends CustomPainter {
 }
 
 class _WavePatternPainter extends CustomPainter {
+  final double canvasW;
+
+  _WavePatternPainter({this.canvasW = 420});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -493,4 +428,3 @@ class _DashedRectPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _DashedRectPainter oldDelegate) => false;
 }
-
