@@ -22,9 +22,11 @@ Page({
     selectMode: false,
     selectedIds: [],
     deleting: false,
+    loggedIn: false,
   },
 
   onShow: function() {
+    this.checkLoginStatus();
     this.loadData();
   },
 
@@ -141,15 +143,35 @@ Page({
   },
 
   onLogout: function() {
+    var self = this;
     wx.showModal({
       title: '退出登录',
       content: '确定要退出吗？',
       success: function(res) {
         if (res.confirm) {
           auth.logout();
-          wx.reLaunch({ url: '/pages/index/index' });
+          getApp().globalData.loggedIn = false;
+          self.setData({ loggedIn: false });
         }
       },
     });
+  },
+
+  onLogin: function() {
+    var self = this;
+    wx.showLoading({ title: '登录中...' });
+    getApp().login().then(function() {
+      wx.hideLoading();
+      wx.showToast({ title: '登录成功', icon: 'success' });
+      self.setData({ loggedIn: true });
+      self.loadData();
+    }).catch(function() {
+      wx.hideLoading();
+      wx.showToast({ title: '登录失败', icon: 'error' });
+    });
+  },
+
+  checkLoginStatus: function() {
+    this.setData({ loggedIn: getApp().isLoggedIn() });
   },
 });

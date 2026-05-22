@@ -12,9 +12,9 @@
       bindtap="onSelect"
     >
       <image
-        wx:if="{{item.display_url}}"
+        wx:if="{{item.local_img}}"
         class="pm-img"
-        src="{{item.display_url}}"
+        src="{{item.local_img}}"
         mode="aspectFill"
       />
       <text wx:else class="pm-icon">⭕</text>

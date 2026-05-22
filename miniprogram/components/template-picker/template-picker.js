@@ -1,23 +1,32 @@
 var api = require('../../utils/api');
+var imageCache = require('../../utils/image-cache');
 var constants = require('../../utils/constants');
 
 Component({
   properties: {
-    templates: { type: Array, value: [] },
+    templates: { type: Array, value: [], observer: '_onItemsChange' },
     selected: { type: String, value: '' },
     loading: { type: Boolean, value: false },
   },
+
   methods: {
+    _onItemsChange: function(items) {
+      if (!items || !items.length) return;
+      var self = this;
+      items.forEach(function(item, idx) {
+        if (!item.image_url) return;
+        var url = item.display_url || api.imageUrl(item.image_url, 'thumb');
+        imageCache.loadImage(url).then(function(localPath) {
+          if (localPath) {
+            self.setData({ ['templates[' + idx + '].local_img']: localPath });
+          }
+        }).catch(function() {});
+      });
+    },
+
     onSelect: function(e) {
       var id = e.currentTarget.dataset.id;
       this.triggerEvent('select', { id: id });
-    },
-    getGradient: function(tpl) {
-      var colors = constants.getGradientColors(tpl);
-      return 'linear-gradient(135deg, ' + colors.join(', ') + ')';
-    },
-    imageUrl: function(path) {
-      return api.imageUrl(path, 'thumb');
     },
   },
 });

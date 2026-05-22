@@ -41,25 +41,35 @@ Page({
   _renderTimer: null,
 
   onLoad: function(options) {
+    // Calculate canvas display size to fit screen while maintaining 14:9 ratio
+    var sysInfo = wx.getSystemInfoSync();
+    var screenW = sysInfo.windowWidth;
+    var displayW = Math.min(screenW - 32, constants.CANVAS_W);
+    var displayH = Math.round(displayW / constants.ASPECT_RATIO);
+
+    var initData = {
+      canvasW: displayW,
+      canvasH: displayH,
+    };
+
     if (options.data) {
       try {
         var card = JSON.parse(decodeURIComponent(options.data));
-        this.setData({
-          design: {
-            id: card.id || 0,
-            template_id: card.template_id || '',
-            to_name: card.to_name || '',
-            from_name: card.from_name || '',
-            message: card.message || '',
-            stamp_id: card.stamp_id || '',
-            postmark_id: card.postmark_id || '',
-            status: card.status || 'PENDING',
-          },
-        });
+        initData.design = {
+          id: card.id || 0,
+          template_id: card.template_id || '',
+          to_name: card.to_name || '',
+          from_name: card.from_name || '',
+          message: card.message || '',
+          stamp_id: card.stamp_id || '',
+          postmark_id: card.postmark_id || '',
+          status: card.status || 'PENDING',
+        };
       } catch (e) {
         console.error('Parse card data failed', e);
       }
     }
+    this.setData(initData);
     this.loadMaterials();
   },
 
@@ -233,8 +243,44 @@ Page({
     this.renderCanvas();
   },
 
+  // Login gate for save/send actions
+  _ensureLogin: function() {
+    var app = getApp();
+    if (app.isLoggedIn()) return Promise.resolve();
+
+    return new Promise(function(resolve, reject) {
+      wx.showModal({
+        title: '微信登录',
+        content: '保存和发送明信片需要微信登录认证',
+        confirmText: '去登录',
+        cancelText: '稍后',
+        success: function(res) {
+          if (!res.confirm) return reject(new Error('cancelled'));
+          wx.showLoading({ title: '登录中...' });
+          app.login().then(function() {
+            wx.hideLoading();
+            wx.showToast({ title: '登录成功', icon: 'success' });
+            resolve();
+          }).catch(function(err) {
+            wx.hideLoading();
+            wx.showToast({ title: '登录失败', icon: 'error' });
+            reject(err);
+          });
+        },
+        fail: reject,
+      });
+    });
+  },
+
   // Save
   onSave: function() {
+    var self = this;
+    self._ensureLogin().then(function() {
+      return self._doSave();
+    }).catch(function() {});
+  },
+
+  _doSave: function() {
     var self = this;
     var design = self.data.design;
     self.setData({ saving: true });
@@ -269,6 +315,14 @@ Page({
 
   // Send (save + share)
   onSend: function() {
+    var self = this;
+    if (self.data.sending) return;
+    self._ensureLogin().then(function() {
+      return self._doSend();
+    }).catch(function() {});
+  },
+
+  _doSend: function() {
     var self = this;
     if (self.data.sending) return;
     self.setData({ sending: true });

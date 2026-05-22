@@ -20,8 +20,16 @@ module.exports = { isSelected: isSelected, findTemplate: findTemplate };
   <view class="nav-actions">
     <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onSelectAll">全选</text>
     <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onCancelSelect">取消</text>
-    <text wx:if="{{!selectMode}}" class="nav-btn" bindtap="onLogout">退出</text>
+    <text wx:elif="{{!loggedIn}}" class="nav-btn login-btn" bindtap="onLogin">登录</text>
+    <text wx:else class="nav-btn" bindtap="onLogout">退出</text>
   </view>
+</view>
+
+<!-- Login prompt banner -->
+<view wx:if="{{!loggedIn && !loading}}" class="login-banner" bindtap="onLogin">
+  <text class="login-icon">🔐</text>
+  <text class="login-hint">微信登录后可保存和分享明信片</text>
+  <text class="login-arrow">›</text>
 </view>
 
 <!-- Loading state -->

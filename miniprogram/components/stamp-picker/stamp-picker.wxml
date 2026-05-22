@@ -15,9 +15,9 @@
       bindtap="onSelect"
     >
       <image
-        wx:if="{{item.display_url}}"
+        wx:if="{{item.local_img}}"
         class="stamp-img"
-        src="{{item.display_url}}"
+        src="{{item.local_img}}"
         mode="aspectFill"
       />
       <text wx:else class="stamp-emoji {{selected === item.id ? 'emoji-big' : ''}}">{{item.emoji}}</text>
