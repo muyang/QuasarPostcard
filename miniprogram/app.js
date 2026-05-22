@@ -44,6 +44,18 @@ App({
     }
   },
 
+  _resolveImageUrls(items) {
+    if (!items || !items.length) return items;
+    return items.map(function(item) {
+      if (item.image_url) {
+        item.display_url = item.image_url.indexOf('http') === 0
+          ? item.image_url
+          : api.imageUrl(item.image_url, 'thumb');
+      }
+      return item;
+    });
+  },
+
   async _preloadMaterials() {
     try {
       const [templates, stamps, postmarks] = await Promise.all([
@@ -51,9 +63,9 @@ App({
         api.getStamps(),
         api.getPostmarks(),
       ]);
-      this.globalData.templates = templates;
-      this.globalData.stamps = stamps;
-      this.globalData.postmarks = postmarks;
+      this.globalData.templates = this._resolveImageUrls(templates);
+      this.globalData.stamps = this._resolveImageUrls(stamps);
+      this.globalData.postmarks = this._resolveImageUrls(postmarks);
     } catch (_) {}
   },
 });

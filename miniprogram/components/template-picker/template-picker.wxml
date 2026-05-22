@@ -31,9 +31,9 @@ module.exports = { getGradient: getGradient };
       bindtap="onSelect"
     >
       <image
-        wx:if="{{item.image_url}}"
+        wx:if="{{item.display_url}}"
         class="card-img"
-        src="{{item.image_url}}"
+        src="{{item.display_url}}"
         mode="aspectFill"
       />
       <text class="card-name">{{item.name}}</text>

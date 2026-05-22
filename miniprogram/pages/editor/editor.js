@@ -2,6 +2,18 @@ var api = require('../../utils/api');
 var renderer = require('../../utils/canvas-renderer');
 var constants = require('../../utils/constants');
 
+function resolveUrls(items) {
+  if (!items || !items.length) return items;
+  return items.map(function(item) {
+    if (item.image_url) {
+      item.display_url = item.image_url.indexOf('http') === 0
+        ? item.image_url
+        : api.imageUrl(item.image_url, 'thumb');
+    }
+    return item;
+  });
+}
+
 Page({
   data: {
     step: 0,
@@ -78,13 +90,13 @@ Page({
     Promise.all([
       app.globalData.templates && app.globalData.templates.length > 0
         ? Promise.resolve(app.globalData.templates)
-        : api.getTemplates().then(function(items) { app.globalData.templates = items; return items; }),
+        : api.getTemplates().then(function(items) { var r = resolveUrls(items); app.globalData.templates = r; return r; }),
       app.globalData.stamps && app.globalData.stamps.length > 0
         ? Promise.resolve(app.globalData.stamps)
-        : api.getStamps().then(function(items) { app.globalData.stamps = items; return items; }),
+        : api.getStamps().then(function(items) { var r = resolveUrls(items); app.globalData.stamps = r; return r; }),
       app.globalData.postmarks && app.globalData.postmarks.length > 0
         ? Promise.resolve(app.globalData.postmarks)
-        : api.getPostmarks().then(function(items) { app.globalData.postmarks = items; return items; }),
+        : api.getPostmarks().then(function(items) { var r = resolveUrls(items); app.globalData.postmarks = r; return r; }),
     ]).then(function(results) {
       var templates = results[0];
       var stamps = results[1];

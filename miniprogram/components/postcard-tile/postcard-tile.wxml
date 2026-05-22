@@ -31,9 +31,9 @@ module.exports = { getGradient: getGradient };
 
   <!-- Background image preview -->
   <image
-    wx:if="{{template.image_url}}"
+    wx:if="{{template.display_url}}"
     class="bg-img"
-    src="{{template.image_url}}"
+    src="{{template.display_url}}"
     mode="aspectFill"
   />
 
