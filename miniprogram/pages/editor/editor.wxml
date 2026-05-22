@@ -1,0 +1,126 @@
+<view class="editor-page">
+  <!-- Header -->
+  <view class="header">
+    <text class="back-btn" bindtap="onGoBack">← 返回</text>
+    <text class="header-title">明信片设计器</text>
+    <view class="header-actions">
+      <text class="save-btn {{saving ? 'disabled' : ''}}" bindtap="onSave">{{saving ? '...' : '保存'}}</text>
+    </view>
+  </view>
+
+  <!-- Canvas -->
+  <view class="canvas-wrap">
+    <canvas
+      id="postcard-canvas"
+      type="2d"
+      class="canvas"
+      style="width: {{canvasW}}px; height: {{canvasH}}px;"
+    ></canvas>
+  </view>
+
+  <!-- Step panel -->
+  <view class="panel">
+    <step-indicator current="{{step}}" bind:stepchange="onStepChange" />
+
+    <view class="divider"></view>
+
+    <!-- Step 0: Template -->
+    <scroll-view wx:if="{{step === 0}}" scroll-y class="step-content">
+      <template-picker
+        templates="{{templates}}"
+        selected="{{design.template_id}}"
+        loading="{{loading}}"
+        bind:select="onTemplateSelect"
+      />
+      <view class="step-nav">
+        <view class="spacer"></view>
+        <view class="btn-primary" bindtap="onNextStep">
+          <text class="btn-text">下一步</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- Step 1: Text -->
+    <scroll-view wx:elif="{{step === 1}}" scroll-y class="step-content">
+      <view class="text-step">
+        <text class="section-title">填写收寄人</text>
+        <view class="input-row">
+          <text class="input-label">收件人</text>
+          <input
+            class="text-input"
+            placeholder="收件人名字"
+            value="{{design.to_name}}"
+            bindinput="onToInput"
+          />
+        </view>
+        <view class="input-row">
+          <text class="input-label">寄件人</text>
+          <input
+            class="text-input"
+            placeholder="寄件人名字"
+            value="{{design.from_name}}"
+            bindinput="onFromInput"
+          />
+        </view>
+        <text class="section-title msg-title">祝福语</text>
+        <textarea
+          class="msg-input"
+          placeholder="写下你想说的话…"
+          value="{{design.message}}"
+          bindinput="onMessageInput"
+          maxlength="200"
+          auto-height
+        />
+      </view>
+      <view class="step-nav">
+        <view class="btn-outline" bindtap="onPrevStep">
+          <text class="btn-outline-text">上一步</text>
+        </view>
+        <view class="btn-primary" bindtap="onNextStep">
+          <text class="btn-text">下一步</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- Step 2: Stamp -->
+    <scroll-view wx:elif="{{step === 2}}" scroll-y class="step-content">
+      <stamp-picker
+        stamps="{{stamps}}"
+        selected="{{design.stamp_id}}"
+        loading="{{loading}}"
+        bind:select="onStampSelect"
+      />
+      <view class="step-nav">
+        <view class="btn-outline" bindtap="onPrevStep">
+          <text class="btn-outline-text">上一步</text>
+        </view>
+        <view class="btn-primary" bindtap="onNextStep">
+          <text class="btn-text">下一步</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- Step 3: Postmark + Send -->
+    <scroll-view wx:elif="{{step === 3}}" scroll-y class="step-content">
+      <postmark-picker
+        postmarks="{{postmarks}}"
+        selected="{{design.postmark_id}}"
+        loading="{{loading}}"
+        bind:select="onPostmarkSelect"
+      />
+      <view class="step-nav send-nav">
+        <view class="btn-outline" bindtap="onPrevStep">
+          <text class="btn-outline-text">上一步</text>
+        </view>
+        <view
+          class="btn-send {{design.stamp_id && design.postmark_id ? '' : 'disabled'}}"
+          bindtap="onSend"
+        >
+          <text class="btn-send-text">
+            {{sending ? '发送中...' : (design.stamp_id && design.postmark_id ? '发送明信片' : '请选择邮票和邮戳')}}
+          </text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

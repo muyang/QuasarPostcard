@@ -1,0 +1,90 @@
+.picker {
+  padding: 0 24rpx;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.title {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.remove-btn {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.loading {
+  height: 240rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid rgba(124, 77, 255, 0.3);
+  border-top-color: #7C4DFF;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.card {
+  width: calc(25% - 12rpx);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12rpx 0;
+  background: #1E1E36;
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.card.selected {
+  border-color: #7C4DFF;
+  border-width: 4rpx;
+  box-shadow: 0 0 16rpx rgba(124, 77, 255, 0.25);
+}
+
+.stamp-img {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 12rpx;
+}
+
+.stamp-emoji {
+  font-size: 56rpx;
+  line-height: 1.2;
+}
+
+.stamp-emoji.emoji-big {
+  font-size: 64rpx;
+}
+
+.stamp-label {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.54);
+  margin-top: 6rpx;
+}
+
+.card.selected .stamp-label {
+  color: #fff;
+}

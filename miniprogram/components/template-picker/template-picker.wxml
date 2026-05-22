@@ -1,0 +1,42 @@
+<wxs module="helper">
+function getGradient(tpl) {
+  var from = tpl.gradient_from || 'FFF0F5';
+  var to = tpl.gradient_to || 'FFC0CB';
+  function hex2rgb(h) {
+    h = h.replace('#', '').replace('0x', '');
+    if (h.length === 8) h = h.slice(2);
+    if (h.length !== 6) h = 'FFF0F5';
+    var r = parseInt(h.slice(0,2), 16);
+    var g = parseInt(h.slice(2,4), 16);
+    var b = parseInt(h.slice(4,6), 16);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+  return 'linear-gradient(135deg, ' + hex2rgb(from) + ', ' + hex2rgb(to) + ')';
+}
+module.exports = { getGradient: getGradient };
+</wxs>
+
+<view class="picker">
+  <view class="title">选择模版</view>
+  <view wx:if="{{loading && templates.length === 0}}" class="loading">
+    <view class="spinner"></view>
+  </view>
+  <scroll-view wx:else scroll-x class="scroll-row">
+    <view
+      wx:for="{{templates}}"
+      wx:key="id"
+      class="card {{selected === item.id ? 'selected' : ''}}"
+      style="background: {{helper.getGradient(item)}};"
+      data-id="{{item.id}}"
+      bindtap="onSelect"
+    >
+      <image
+        wx:if="{{item.image_url}}"
+        class="card-img"
+        src="{{item.image_url}}"
+        mode="aspectFill"
+      />
+      <text class="card-name">{{item.name}}</text>
+    </view>
+  </scroll-view>
+</view>

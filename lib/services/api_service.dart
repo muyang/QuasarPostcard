@@ -15,6 +15,7 @@ class ApiService {
   static String _token = '';
 
   static String get baseUrl => _baseUrl;
+  static String get token => _token;
   static bool get isAuthenticated => _token.isNotEmpty;
 
   static Future<void> init() async {
@@ -29,6 +30,31 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('postcard_server_url', serverUrl);
     await prefs.setString('postcard_token', token);
+  }
+
+  static Future<void> saveToken(String token) async {
+    _token = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('postcard_token', token);
+  }
+
+  static Future<void> logout() async {
+    _token = '';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('postcard_token', '');
+  }
+
+  static Future<Map<String, dynamic>?> getMe() async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$_baseUrl/api/auth/me'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body);
+      }
+    } catch (_) {}
+    return null;
   }
 
   static Map<String, String> get _headers => {

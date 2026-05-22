@@ -3,7 +3,7 @@ import os
 from io import BytesIO
 from PIL import Image, ImageOps
 from fastapi import APIRouter, UploadFile, File, Depends
-from api.auth import verify_admin
+from api.auth import verify_user
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
@@ -25,7 +25,7 @@ def _save_image(im, path, fmt="JPEG"):
 @router.post("/image")
 async def upload_image(
     file: UploadFile = File(...),
-    _: str = Depends(verify_admin),
+    _: dict = Depends(verify_user),
 ):
     ext = os.path.splitext(file.filename or ".png")[1].lower() or ".png"
     base = uuid.uuid4().hex[:12]

@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import os.path as osp
 
@@ -10,6 +10,8 @@ from api.auth import router as auth_router
 from api.postcards import router as postcards_router
 from api.upload import router as upload_router
 from api.materials import router as materials_router
+from api.wechat import router as wechat_router
+from api.share import router as share_router
 from admin_page import router as admin_page_router
 
 # Create tables
@@ -64,6 +66,18 @@ with engine.connect() as conn:
         ("from_bg_opacity", "INTEGER DEFAULT 0"),
         ("to_bg_opacity", "INTEGER DEFAULT 0"),
     ]
+    # AppUser table and postcard user_id
+    try:
+        conn.execute(sa_text(f"CREATE TABLE IF NOT EXISTS app_users (id INTEGER PRIMARY KEY AUTOINCREMENT, openid VARCHAR(128) UNIQUE NOT NULL, unionid VARCHAR(128), nickname VARCHAR(128), avatar_url VARCHAR(512), created_at DATETIME, last_login_at DATETIME)"))
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        conn.execute(sa_text(f"ALTER TABLE postcards ADD COLUMN user_id INTEGER"))
+        conn.commit()
+    except Exception:
+        pass
+
     for col_name, col_type in template_new_cols:
         try:
             conn.execute(sa_text(f"ALTER TABLE templates ADD COLUMN {col_name} {col_type}"))
@@ -93,6 +107,8 @@ app.include_router(auth_router)
 app.include_router(postcards_router)
 app.include_router(upload_router)
 app.include_router(materials_router)
+app.include_router(wechat_router)
+app.include_router(share_router)
 app.include_router(admin_page_router)
 
 class ImageCORSHandler(BaseHTTPMiddleware):
@@ -143,6 +159,35 @@ async def serve_image(file_path: str, size: str = ""):
         "Timing-Allow-Origin": "*",
     })
 
+
+# Share view page for QR code / WeChat sharing
+@app.get("/share/view/{filename}")
+async def share_view_page(filename: str):
+    filepath = osp.join("static", "shares", filename)
+    if not osp.isfile(filepath):
+        raise HTTPException(404, detail="分享不存在")
+    image_url = f"/static/shares/{filename}"
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一张明信片</title>
+<meta property="og:title" content="一张明信片" />
+<meta property="og:image" content="{image_url}" />
+<meta property="og:description" content="有人给你寄了一张明信片" />
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#0D0D1A;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,sans-serif}}
+img{{max-width:90vw;max-height:70vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5)}}
+.hint{{color:#666;margin-top:24px;font-size:13px}}
+</style>
+</head>
+<body>
+<img src="{image_url}" alt="明信片" />
+<p class="hint">扫描二维码或分享链接查看</p>
+</body>
+</html>""")
 
 # Catch-all: serve Flutter SPA for all non-API paths (must be last)
 @app.get("/{full_path:path}")

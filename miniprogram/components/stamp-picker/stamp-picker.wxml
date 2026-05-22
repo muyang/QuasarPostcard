@@ -1,0 +1,27 @@
+<view class="picker">
+  <view class="header">
+    <text class="title">选择邮票</text>
+    <text wx:if="{{selected}}" class="remove-btn" bindtap="onRemove">移除</text>
+  </view>
+  <view wx:if="{{loading && stamps.length === 0}}" class="loading">
+    <view class="spinner"></view>
+  </view>
+  <view wx:else class="grid">
+    <view
+      wx:for="{{stamps}}"
+      wx:key="id"
+      class="card {{selected === item.id ? 'selected' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="onSelect"
+    >
+      <image
+        wx:if="{{item.image_url}}"
+        class="stamp-img"
+        src="{{item.image_url}}"
+        mode="aspectFill"
+      />
+      <text wx:else class="stamp-emoji {{selected === item.id ? 'emoji-big' : ''}}">{{item.emoji}}</text>
+      <text class="stamp-label">{{item.label}}</text>
+    </view>
+  </view>
+</view>

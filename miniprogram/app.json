@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/editor/editor"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "navigationBarBackgroundColor": "#0D0D1A",
+    "navigationBarTitleText": "明信片设计器",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0D0D1A",
+    "backgroundTextStyle": "light"
+  },
+  "sitemapLocation": "sitemap.json"
+}

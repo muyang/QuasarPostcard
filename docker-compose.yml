@@ -9,4 +9,16 @@ services:
       - ./backend/static/cards:/app/static/cards
     environment:
       - DB_PATH=sqlite:////app/data/postcard.db
+      - JWT_SECRET=${JWT_SECRET:-postcard-designer-secret-2024}
+      - WECHAT_APPID=${WECHAT_APPID:-}
+      - WECHAT_APPSECRET=${WECHAT_APPSECRET:-}
+      - WECHAT_REDIRECT_URI=${WECHAT_REDIRECT_URI:-}
+      - BASE_URL=${BASE_URL:-http://localhost:8100}
+      - WECHAT_MINI_APPID=${WECHAT_MINI_APPID:-}
+      - WECHAT_MINI_APPSECRET=${WECHAT_MINI_APPSECRET:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
     restart: unless-stopped

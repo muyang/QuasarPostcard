@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "postcard-tile": "/components/postcard-tile/postcard-tile"
+  },
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

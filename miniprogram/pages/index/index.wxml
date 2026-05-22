@@ -1,0 +1,72 @@
+<wxs module="helper">
+function isSelected(id, selectedIds) {
+  for (var i = 0; i < selectedIds.length; i++) {
+    if (selectedIds[i] === id) return true;
+  }
+  return false;
+}
+function findTemplate(templateId, templates) {
+  for (var i = 0; i < templates.length; i++) {
+    if (templates[i].id === templateId) return templates[i];
+  }
+  return { name: '明信片', gradient_from: 'FFF0F5', gradient_to: 'FFC0CB' };
+}
+module.exports = { isSelected: isSelected, findTemplate: findTemplate };
+</wxs>
+
+<!-- Navigation bar -->
+<view class="nav-bar">
+  <text class="nav-title">明信片</text>
+  <view class="nav-actions">
+    <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onSelectAll">全选</text>
+    <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onCancelSelect">取消</text>
+    <text wx:if="{{!selectMode}}" class="nav-btn" bindtap="onLogout">退出</text>
+  </view>
+</view>
+
+<!-- Loading state -->
+<view wx:if="{{loading}}" class="center-box">
+  <view class="spinner"></view>
+  <text class="hint-text">加载中...</text>
+</view>
+
+<!-- Error state -->
+<view wx:elif="{{error}}" class="center-box">
+  <text class="error-text">{{error}}</text>
+  <view class="retry-btn" bindtap="loadData">
+    <text class="retry-text">重试</text>
+  </view>
+</view>
+
+<!-- Empty state -->
+<view wx:elif="{{postcards.length === 0}}" class="center-box">
+  <text class="empty-icon">📮</text>
+  <text class="empty-text">还没有明信片</text>
+  <text class="empty-hint">点击下方按钮创建第一张</text>
+</view>
+
+<!-- Postcard grid -->
+<view wx:else class="grid">
+  <view wx:for="{{postcards}}" wx:key="id" class="grid-item">
+    <postcard-tile
+      postcard="{{item}}"
+      template="{{helper.findTemplate(item.template_id, templates)}}"
+      selected="{{helper.isSelected(item.id, selectedIds)}}"
+      selectMode="{{selectMode}}"
+      bind:cardtap="onCardTap"
+      bind:cardlongpress="onCardLongPress"
+    />
+  </view>
+</view>
+
+<!-- Delete bar (select mode) -->
+<view wx:if="{{selectMode && selectedIds.length > 0}}" class="delete-bar">
+  <view class="delete-btn {{deleting ? 'disabled' : ''}}" bindtap="onDeleteSelected">
+    <text class="delete-text">{{deleting ? '删除中...' : '删除 (' + selectedIds.length + ')'}}</text>
+  </view>
+</view>
+
+<!-- FAB -->
+<view wx:if="{{!selectMode}}" class="fab" bindtap="onCreateNew">
+  <text class="fab-icon">+</text>
+</view>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微信登录回调</title>
+</head>
+<body>
+<p>登录中，请稍候...</p>
+<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  var state = params.get('state');
+  if (window.opener && window.opener !== window) {
+    window.opener.postMessage({
+      type: 'wechat_oauth_callback',
+      code: code,
+      state: state,
+      error: params.get('errcode') || null
+    }, window.location.origin);
+    window.close();
+  } else {
+    window.location.href = '/?wechat_code=' + encodeURIComponent(code || '');
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<view class="step-bar">
+  <view
+    wx:for="{{steps}}"
+    wx:key="label"
+    class="step-item"
+    data-index="{{index}}"
+    bindtap="onTap"
+  >
+    <view class="step-circle {{current === index ? 'active' : (current > index ? 'done' : '')}}">
+      <text class="step-icon">{{item.icon === 'palette' ? '🎨' : item.icon === 'text' ? '✏️' : item.icon === 'stamp' ? '📮' : '⭕'}}</text>
+    </view>
+    <text class="step-label {{current === index ? 'label-active' : ''}}">{{item.label}}</text>
+  </view>
+</view>

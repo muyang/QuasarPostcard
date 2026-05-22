@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Postcard
 from schemas import PostcardCreate, PostcardUpdate, PostcardResponse, PostcardListResponse
-from api.auth import verify_admin
+from api.auth import verify_admin, verify_user
 
 router = APIRouter(prefix="/api/postcards", tags=["postcards"])
 
@@ -21,6 +21,7 @@ def _build_response(card: Postcard) -> dict:
         "postmark_id": card.postmark_id,
         "image_url": card.image_url,
         "status": card.status,
+        "owner_id": card.user_id,
         "created_at": card.created_at,
         "updated_at": card.updated_at,
     }
@@ -32,11 +33,16 @@ def list_postcards(
     limit: int = Query(50, ge=1, le=200),
     status: str = Query("", description="Filter by status"),
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    user: dict = Depends(verify_user),
 ):
     query = db.query(Postcard)
     if status:
         query = query.filter(Postcard.status == status)
+    # WeChat users see only their own postcards; admin sees all
+    if user["type"] == "wechat" and user.get("user_id"):
+        query = query.filter(Postcard.user_id == user["user_id"])
+    elif user["type"] == "admin":
+        pass  # admin sees all
     total = query.count()
     cards = query.order_by(Postcard.updated_at.desc()).offset(skip).limit(limit).all()
 
@@ -50,9 +56,10 @@ def list_postcards(
 def create_postcard(
     request: PostcardCreate,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    user: dict = Depends(verify_user),
 ):
     card = Postcard(
+        user_id=user.get("user_id") if user["type"] == "wechat" else None,
         template_id=request.template_id,
         theme_color=request.theme_color,
         to_name=request.to_name,
@@ -74,11 +81,14 @@ def update_postcard(
     card_id: int,
     request: PostcardUpdate,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    user: dict = Depends(verify_user),
 ):
     card = db.query(Postcard).filter(Postcard.id == card_id).first()
     if not card:
         raise HTTPException(status_code=404, detail="明信片不存在")
+    # Ownership check: wechat users can only update their own cards
+    if user["type"] == "wechat" and card.user_id != user.get("user_id"):
+        raise HTTPException(status_code=403, detail="无权修改此明信片")
 
     updates = request.model_dump(exclude_unset=True)
     for key, value in updates.items():
@@ -92,21 +102,31 @@ def update_postcard(
 def delete_postcard(
     card_id: int,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    user: dict = Depends(verify_user),
 ):
     card = db.query(Postcard).filter(Postcard.id == card_id).first()
     if not card:
         raise HTTPException(status_code=404, detail="明信片不存在")
+    # Ownership check
+    if user["type"] == "wechat" and card.user_id != user.get("user_id"):
+        raise HTTPException(status_code=403, detail="无权删除此明信片")
     db.delete(card)
     db.commit()
     return {"success": True, "message": "已删除"}
 
 
 @router.post("/batch-delete")
-def batch_delete_postcards(data: dict, db: Session = Depends(get_db), _: str = Depends(verify_admin)):
+def batch_delete_postcards(
+    data: dict,
+    db: Session = Depends(get_db),
+    user: dict = Depends(verify_user),
+):
     ids = data.get("ids", [])
     if not ids:
         return {"success": False, "message": "未提供ID"}
-    deleted = db.query(Postcard).filter(Postcard.id.in_(ids)).delete(synchronize_session=False)
+    query = db.query(Postcard).filter(Postcard.id.in_(ids))
+    if user["type"] == "wechat":
+        query = query.filter(Postcard.user_id == user.get("user_id"))
+    deleted = query.delete(synchronize_session=False)
     db.commit()
     return {"success": True, "deleted": deleted}

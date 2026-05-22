@@ -1,0 +1,116 @@
+/* Global CSS Variables */
+page {
+  --bg-dark: #0D0D1A;
+  --bg-panel: #13132B;
+  --bg-card: #1E1E2E;
+  --bg-input: #2A2A4A;
+  --primary: #7C4DFF;
+  --primary-light: #9B7BFF;
+  --text-primary: #FFFFFF;
+  --text-secondary: #8888AA;
+  --text-muted: #555577;
+  --border: #2A2A4A;
+  --wechat-green: #07C160;
+  --danger: #C62828;
+  --success: #4CAF50;
+
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Utility Classes */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.text-muted {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.empty-state .icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.15;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+/* Button styles */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.btn-primary[disabled] {
+  background: #2A2A4A;
+  color: #888;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #888;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 10px 22px;
+  font-size: 13px;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: 40px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(124, 77, 255, 0.3);
+  z-index: 100;
+}
+
+.fab:active {
+  opacity: 0.8;
+}

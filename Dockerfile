@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 
 # Ensure data & upload directories exist
-RUN mkdir -p /app/data /app/static/cards
+RUN mkdir -p /app/data /app/static/cards /app/static/shares
 
 # Store DB in persistent data volume
 ENV DB_PATH=sqlite:////app/data/postcard.db

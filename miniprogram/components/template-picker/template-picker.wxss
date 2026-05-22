@@ -1,0 +1,68 @@
+.picker {
+  padding: 0 24rpx;
+}
+
+.title {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  margin-bottom: 16rpx;
+}
+
+.loading {
+  height: 120rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid rgba(124, 77, 255, 0.3);
+  border-top-color: #7C4DFF;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.scroll-row {
+  white-space: nowrap;
+  height: 140rpx;
+}
+
+.card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 152rpx;
+  height: 120rpx;
+  border-radius: 24rpx;
+  margin-right: 16rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  vertical-align: top;
+}
+
+.card.selected {
+  border-color: #7C4DFF;
+  border-width: 4rpx;
+  box-shadow: 0 0 16rpx rgba(124, 77, 255, 0.25);
+}
+
+.card-img {
+  width: 152rpx;
+  height: 72rpx;
+  border-radius: 16rpx;
+}
+
+.card-name {
+  font-size: 20rpx;
+  color: rgba(0, 0, 0, 0.87);
+  font-weight: 500;
+  margin-top: 4rpx;
+}

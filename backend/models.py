@@ -12,10 +12,23 @@ class AdminUser(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class AppUser(Base):
+    __tablename__ = "app_users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    openid = Column(String(128), unique=True, nullable=False, index=True)
+    unionid = Column(String(128), nullable=True)
+    nickname = Column(String(128), nullable=True)
+    avatar_url = Column(String(512), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_login_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class Postcard(Base):
     __tablename__ = "postcards"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=True, index=True)
     template_id = Column(String(32), nullable=False, default="floral")
     theme_color = Column(String(16), nullable=False, default="FFE91E63")
     to_name = Column(String(128), default="")

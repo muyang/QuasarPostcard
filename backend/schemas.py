@@ -52,6 +52,7 @@ class PostcardResponse(BaseModel):
     postmark_id: Optional[str] = None
     image_url: Optional[str] = None
     status: str
+    owner_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
@@ -62,6 +63,34 @@ class PostcardResponse(BaseModel):
 class PostcardListResponse(BaseModel):
     cards: list[PostcardResponse]
     total: int
+
+
+# ======== Upload ========
+
+# ======== WeChat ========
+
+class WechatLoginRequest(BaseModel):
+    code: str
+
+
+class WechatLoginResponse(BaseModel):
+    success: bool
+    token: Optional[str] = None
+    nickname: Optional[str] = None
+    avatar_url: Optional[str] = None
+    message: str = ""
+
+
+class WechatConfigResponse(BaseModel):
+    appid: str
+    redirect_uri: str
+    configured: bool
+
+
+class MiniProgramLoginRequest(BaseModel):
+    code: str
+    nickname: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 
 # ======== Upload ========

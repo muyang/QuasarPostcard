@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from database import get_db
 from models import PostcardTemplate, PostcardStamp, PostcardPostmark
-from api.auth import verify_admin
+from api.auth import verify_admin, verify_user
 
 router = APIRouter(prefix="/api/materials", tags=["materials"])
 
@@ -58,7 +58,7 @@ def list_templates(
     status: str = Query(""),
     search: str = Query(""),
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: dict = Depends(verify_user),
 ):
     q = db.query(PostcardTemplate)
     if status:
@@ -128,7 +128,7 @@ def list_stamps(
     status: str = Query(""),
     search: str = Query(""),
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: dict = Depends(verify_user),
 ):
     q = db.query(PostcardStamp)
     if status:
@@ -191,7 +191,7 @@ def list_postmarks(
     status: str = Query(""),
     search: str = Query(""),
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: dict = Depends(verify_user),
 ):
     q = db.query(PostcardPostmark)
     if status:
