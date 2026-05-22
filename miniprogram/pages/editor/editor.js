@@ -1,6 +1,7 @@
 var api = require('../../utils/api');
 var renderer = require('../../utils/canvas-renderer');
 var constants = require('../../utils/constants');
+var imageCache = require('../../utils/image-cache');
 
 function resolveUrls(items) {
   if (!items || !items.length) return items;
@@ -35,6 +36,7 @@ Page({
     sending: false,
     canvasW: constants.CANVAS_W,
     canvasH: constants.CANVAS_H,
+    statusBarHeight: 20,
   },
 
   _canvas: null,
@@ -50,6 +52,7 @@ Page({
     var initData = {
       canvasW: displayW,
       canvasH: displayH,
+      statusBarHeight: sysInfo.statusBarHeight || 20,
     };
 
     if (options.data) {
@@ -121,6 +124,11 @@ Page({
         postmarks: postmarks,
         design: design,
         loading: false,
+      });
+      [].concat(templates, stamps, postmarks).forEach(function(item) {
+        if (item && item.display_url) {
+          imageCache.loadImage(item.display_url).catch(function() {});
+        }
       });
       self.renderCanvas();
     }).catch(function(err) {
@@ -362,6 +370,11 @@ Page({
   },
 
   onGoBack: function() {
-    wx.navigateBack();
+    var pages = getCurrentPages();
+    if (pages.length > 1) {
+      wx.navigateBack();
+    } else {
+      wx.reLaunch({ url: '/pages/index/index' });
+    }
   },
 });

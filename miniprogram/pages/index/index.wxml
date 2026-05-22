@@ -15,7 +15,7 @@ module.exports = { isSelected: isSelected, findTemplate: findTemplate };
 </wxs>
 
 <!-- Navigation bar -->
-<view class="nav-bar">
+<view class="nav-bar" style="padding-top: {{statusBarHeight + 12}}px;">
   <text class="nav-title">明信片</text>
   <view class="nav-actions">
     <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onSelectAll">全选</text>

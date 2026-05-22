@@ -1,0 +1,85 @@
+.login-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--bg-dark);
+  padding: 0 48rpx;
+  box-sizing: border-box;
+}
+
+.loading-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 6rpx solid rgba(124, 77, 255, 0.3);
+  border-top-color: #7C4DFF;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 120rpx;
+}
+
+.brand-icon {
+  font-size: 120rpx;
+  margin-bottom: 32rpx;
+}
+
+.brand-title {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 16rpx;
+}
+
+.brand-desc {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.wx-login-btn {
+  width: 100%;
+  max-width: 600rpx;
+  padding: 24rpx 0;
+  background: #07C160;
+  border-radius: 48rpx;
+  text-align: center;
+}
+
+.wx-login-btn.disabled {
+  opacity: 0.6;
+}
+
+.wx-login-text {
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.skip-text {
+  margin-top: 32rpx;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.35);
+}

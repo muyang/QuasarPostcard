@@ -1,5 +1,6 @@
 var api = require('./utils/api');
 var auth = require('./utils/auth');
+var imageCache = require('./utils/image-cache');
 
 App({
   globalData: {
@@ -13,30 +14,40 @@ App({
     serverUrl: 'https://postcard.hn.takin.cc',
     loggedIn: false,
     loginPromise: null,
+    statusBarHeight: 0,
   },
 
   onLaunch: function() {
-    this._restoreSession();
+    var sysInfo = wx.getSystemInfoSync();
+    this.globalData.statusBarHeight = sysInfo.statusBarHeight || 20;
+    this._sessionPromise = this._restoreSession();
   },
 
   _restoreSession: function() {
     var token = wx.getStorageSync('token');
-    if (!token) return;
+    if (!token) return Promise.resolve(false);
     api.setToken(token);
     var self = this;
-    api.getMe().then(function(me) {
+    return api.getMe().then(function(me) {
       if (me && me.authenticated) {
         self.globalData.token = token;
         self.globalData.nickname = me.nickname || '';
         self.globalData.avatarUrl = me.avatar_url || '';
         self.globalData.loggedIn = true;
         self._preloadMaterials();
+        return true;
       } else {
         self._clearSession();
+        return false;
       }
     }).catch(function() {
       self._clearSession();
+      return false;
     });
+  },
+
+  checkSession: function() {
+    return this._sessionPromise || Promise.resolve(false);
   },
 
   _clearSession: function() {
@@ -92,6 +103,20 @@ App({
       self.globalData.templates = self._resolveImageUrls(results[0]);
       self.globalData.stamps = self._resolveImageUrls(results[1]);
       self.globalData.postmarks = self._resolveImageUrls(results[2]);
+      self._preloadImages();
     }).catch(function() {});
+  },
+
+  _preloadImages: function() {
+    var all = [].concat(
+      this.globalData.templates,
+      this.globalData.stamps,
+      this.globalData.postmarks
+    );
+    all.forEach(function(item) {
+      if (item && item.display_url) {
+        imageCache.loadImage(item.display_url).catch(function() {});
+      }
+    });
   },
 });

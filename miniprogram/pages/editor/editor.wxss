@@ -9,7 +9,6 @@
   display: flex;
   align-items: center;
   padding: 16rpx 24rpx;
-  padding-top: calc(16rpx + env(safe-area-inset-top));
 }
 
 .back-btn {

@@ -23,6 +23,11 @@ Page({
     selectedIds: [],
     deleting: false,
     loggedIn: false,
+    statusBarHeight: 20,
+  },
+
+  onLoad: function() {
+    this.setData({ statusBarHeight: getApp().globalData.statusBarHeight });
   },
 
   onShow: function() {

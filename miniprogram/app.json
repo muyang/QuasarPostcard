@@ -1,7 +1,8 @@
 {
   "pages": [
-    "pages/index/index",
-    "pages/editor/editor"
+    "pages/login/login",
+    "pages/editor/editor",
+    "pages/index/index"
   ],
   "window": {
     "navigationStyle": "custom",
