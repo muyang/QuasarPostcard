@@ -1,0 +1,13 @@
+{
+  "name": "quasar-postcard",
+  "version": "0.9.2",
+  "private": true,
+  "description": "明信片设计器 — WeChat Mini Program CI scripts",
+  "scripts": {
+    "preview": "node scripts/preview.js",
+    "upload": "node scripts/upload.js"
+  },
+  "dependencies": {
+    "miniprogram-ci": "^2.1.0"
+  }
+}

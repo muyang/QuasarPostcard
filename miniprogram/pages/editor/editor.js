@@ -37,6 +37,8 @@ Page({
     canvasW: constants.CANVAS_W,
     canvasH: constants.CANVAS_H,
     statusBarHeight: 20,
+    navRight: 16,
+    navHeight: 44,
   },
 
   _canvas: null,
@@ -49,10 +51,13 @@ Page({
     var displayW = Math.min(screenW - 32, constants.CANVAS_W);
     var displayH = Math.round(displayW / constants.ASPECT_RATIO);
 
+    var g = getApp().globalData;
     var initData = {
       canvasW: displayW,
       canvasH: displayH,
-      statusBarHeight: sysInfo.statusBarHeight || 20,
+      statusBarHeight: g.statusBarHeight,
+      navRight: g.screenWidth - g.capsuleLeft + 12,
+      navHeight: g.capsuleTop - g.statusBarHeight + g.capsuleHeight + 12,
     };
 
     if (options.data) {

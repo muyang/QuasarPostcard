@@ -24,10 +24,18 @@ Page({
     deleting: false,
     loggedIn: false,
     statusBarHeight: 20,
+    navRight: 16,
+    navHeight: 44,
   },
 
   onLoad: function() {
-    this.setData({ statusBarHeight: getApp().globalData.statusBarHeight });
+    var app = getApp();
+    var g = app.globalData;
+    this.setData({
+      statusBarHeight: g.statusBarHeight,
+      navRight: g.screenWidth - g.capsuleLeft + 12,
+      navHeight: g.capsuleTop - g.statusBarHeight + g.capsuleHeight + 12,
+    });
   },
 
   onShow: function() {

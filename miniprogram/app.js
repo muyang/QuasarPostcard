@@ -15,11 +15,24 @@ App({
     loggedIn: false,
     loginPromise: null,
     statusBarHeight: 0,
+    capsuleRight: 0,
+    capsuleLeft: 0,
+    capsuleTop: 0,
+    capsuleHeight: 0,
+    screenWidth: 375,
   },
 
   onLaunch: function() {
     var sysInfo = wx.getSystemInfoSync();
     this.globalData.statusBarHeight = sysInfo.statusBarHeight || 20;
+    this.globalData.screenWidth = sysInfo.windowWidth || 375;
+    try {
+      var capsule = wx.getMenuButtonBoundingClientRect();
+      this.globalData.capsuleRight = capsule.right;
+      this.globalData.capsuleLeft = capsule.left;
+      this.globalData.capsuleTop = capsule.top;
+      this.globalData.capsuleHeight = capsule.height;
+    } catch (e) {}
     this._sessionPromise = this._restoreSession();
   },
 

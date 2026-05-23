@@ -31,3 +31,10 @@ cert/
 
 # User-uploaded content
 backend/static/cards/
+
+# WeChat Mini Program CI
+miniprogram/private.key
+preview-qrcode.png
+
+# Node
+node_modules/
