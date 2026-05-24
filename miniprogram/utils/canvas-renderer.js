@@ -100,9 +100,9 @@ function drawPostcard(canvas, design) {
     return drawBackgroundImage(ctx, canvas, tpl, w, h);
   }).then(function() {
     drawDecoration(ctx, tpl, w, h);
-    return drawPostmarkElement(ctx, canvas, tpl, postmark, w, h);
-  }).then(function() {
     return drawStampElement(ctx, canvas, tpl, stamp, w, h);
+  }).then(function() {
+    return drawPostmarkElement(ctx, canvas, tpl, postmark, w, h);
   }).then(function() {
     drawTextField(ctx, '寄件人', fromName, tpl.fromColor, tpl.fromFont, tpl.fromSize,
       tpl.fromX, tpl.fromY, tpl.fromW, tpl.fromH,
@@ -254,10 +254,20 @@ function drawPostmarkElement(ctx, canvas, tpl, postmark, w, h) {
         var img = canvas.createImage();
         return new Promise(function(resolve) {
           img.onload = function() {
+            var drawW = pmkSize;
+            var drawH = pmkSize;
+            if (img.width && img.height) {
+              var ratio = img.width / img.height;
+              if (ratio > 1) {
+                drawH = pmkSize / ratio;
+              } else {
+                drawW = pmkSize * ratio;
+              }
+            }
             ctx.save();
             ctx.translate(cx, cy);
             ctx.rotate(rotRad);
-            ctx.drawImage(img, -pmkSize / 2, -pmkSize / 2, pmkSize, pmkSize);
+            ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
             ctx.restore();
             resolve();
           };

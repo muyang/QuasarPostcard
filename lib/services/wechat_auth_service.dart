@@ -12,39 +12,64 @@ class WechatAuthResult {
 }
 
 class WechatAuthService {
+  static Map<String, dynamic>? _cachedConfig;
+
   static Future<Map<String, dynamic>> getConfig() async {
     final uri = Uri.parse('${ApiService.baseUrl}/api/auth/wechat/config');
     final resp = await html.HttpRequest.request(uri.toString(), method: 'GET');
     return jsonDecode(resp.responseText!) as Map<String, dynamic>;
   }
 
-  static Future<WechatAuthResult> login() async {
-    // 1. Get WeChat config
-    Map<String, dynamic> config;
+  /// Prefetch config so the popup can be opened synchronously on click.
+  static Future<void> prefetchConfig() async {
     try {
-      config = await getConfig();
-    } catch (e) {
-      return WechatAuthResult(error: '无法获取微信配置: $e');
+      _cachedConfig = await getConfig();
+    } catch (_) {}
+  }
+
+  static Future<WechatAuthResult> login() async {
+    // Open popup FIRST (synchronous, before any async) to avoid blocker
+    final left = ((html.window.screen?.width ?? 1200) / 2 - 300).round();
+    final popup = html.window.open(
+      'about:blank',
+      'wechat_login',
+      'width=600,height=600,left=$left,top=100',
+    );
+
+    if (popup == null) {
+      return WechatAuthResult(error: '浏览器阻止了弹窗，请先允许弹窗后重试');
     }
 
+    // Now safe to do async work — popup is already open
+    try {
+      _cachedConfig ??= await getConfig();
+    } catch (e) {
+      popup.close();
+      return WechatAuthResult(error: '无法获取微信配置');
+    }
+
+    final config = _cachedConfig!;
     if (config['configured'] != true) {
-      return WechatAuthResult(error: '微信登录未配置，请使用管理员登录');
+      popup.close();
+      return WechatAuthResult(error: '微信登录未配置');
     }
 
     final appid = config['appid'] as String;
     final redirectUri = config['redirect_uri'] as String;
     final state = DateTime.now().millisecondsSinceEpoch.toString();
 
-    // 2. Build WeChat OAuth URL
-    final authUrl = 'https://open.weixin.qq.com/connect/oauth2/authorize?'
+    final authUrl = 'https://open.weixin.qq.com/connect/qrconnect?'
         'appid=$appid'
         '&redirect_uri=${Uri.encodeComponent(redirectUri)}'
         '&response_type=code'
-        '&scope=snsapi_userinfo'
+        '&scope=snsapi_login'
         '&state=$state'
         '#wechat_redirect';
 
-    // 3. Open popup and listen for postMessage from callback
+    // Navigate the already-open popup to WeChat
+    popup.location.href = authUrl;
+
+    // Listen for postMessage from callback
     final completer = Completer<WechatAuthResult>();
     late StreamSubscription<dynamic> listener;
 
@@ -53,6 +78,7 @@ class WechatAuthService {
         final data = (event as html.MessageEvent).data;
         if (data is Map && data['type'] == 'wechat_oauth_callback') {
           listener.cancel();
+          try { popup.close(); } catch (_) {}
           if (data['error'] != null) {
             completer.complete(WechatAuthResult(error: '微信授权失败: ${data['error']}'));
           } else if (data['code'] != null) {
@@ -64,18 +90,13 @@ class WechatAuthService {
       } catch (_) {}
     });
 
-    // Timeout after 5 minutes
     Timer(const Duration(minutes: 5), () {
       if (!completer.isCompleted) {
         listener.cancel();
+        try { popup.close(); } catch (_) {}
         completer.complete(WechatAuthResult(error: '登录超时，请重试'));
       }
     });
-
-    // Open the popup
-    final left = ((html.window.screen?.width ?? 1200) ~/ 2 - 300).toString();
-    html.window.open(authUrl, 'wechat_login',
-        'width=600,height=600,left=$left,top=100');
 
     return completer.future;
   }

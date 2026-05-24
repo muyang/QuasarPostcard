@@ -1,11 +1,7 @@
 <view class="editor-page">
   <!-- Header -->
-  <view class="header" style="padding-top: {{statusBarHeight}}px; padding-right: {{navRight}}px; height: {{navHeight}}px;">
-    <text class="back-btn" bindtap="onGoBack">← 返回</text>
+  <view class="header" style="padding-top: {{statusBarHeight}}px; height: {{navHeight}}px;">
     <text class="header-title">明信片设计器</text>
-    <view class="header-actions">
-      <text class="save-btn {{saving ? 'disabled' : ''}}" bindtap="onSave">{{saving ? '...' : '保存'}}</text>
-    </view>
   </view>
 
   <!-- Canvas -->
@@ -117,10 +113,20 @@
           bindtap="onSend"
         >
           <text class="btn-send-text">
-            {{sending ? '发送中...' : (design.stamp_id && design.postmark_id ? '发送明信片' : '请选择邮票和邮戳')}}
+            {{sending ? '发送中...' : (design.stamp_id && design.postmark_id ? '发送给好友' : '请选择邮票和邮戳')}}
           </text>
         </view>
       </view>
     </scroll-view>
+  </view>
+
+  <!-- Bottom toolbar -->
+  <view class="bottom-toolbar">
+    <view class="toolbar-btn toolbar-back" bindtap="onGoBack">
+      <text class="toolbar-btn-text">← 返回</text>
+    </view>
+    <view class="toolbar-btn toolbar-save {{saving ? 'disabled' : ''}}" bindtap="onSaveToAlbum">
+      <text class="toolbar-btn-text">{{saving ? '保存中...' : '保存到相册'}}</text>
+    </view>
   </view>
 </view>

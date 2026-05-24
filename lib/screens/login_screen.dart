@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
     _fade = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
+    WechatAuthService.prefetchConfig();
   }
 
   @override

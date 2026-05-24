@@ -285,7 +285,45 @@ Page({
     });
   },
 
-  // Save
+  // Save to phone album
+  onSaveToAlbum: function() {
+    var self = this;
+    if (self.data.saving) return;
+    self.setData({ saving: true });
+
+    renderer.canvasToTempFile(self._canvas).then(function(tempPath) {
+      return new Promise(function(resolve, reject) {
+        wx.saveImageToPhotosAlbum({
+          filePath: tempPath,
+          success: function() { resolve(); },
+          fail: function(err) {
+            if (err.errMsg && err.errMsg.indexOf('auth deny') !== -1) {
+              wx.showModal({
+                title: '需要相册权限',
+                content: '请在设置中允许访问相册',
+                confirmText: '去设置',
+                success: function(res) {
+                  if (res.confirm) wx.openSetting();
+                },
+              });
+            }
+            reject(err);
+          },
+        });
+      });
+    }).then(function() {
+      wx.showToast({ title: '已保存到相册', icon: 'success' });
+      self.setData({ saving: false });
+    }).catch(function(err) {
+      console.error('saveToAlbum error', err);
+      if (!(err.errMsg && err.errMsg.indexOf('auth deny') !== -1)) {
+        wx.showToast({ title: '保存失败', icon: 'error' });
+      }
+      self.setData({ saving: false });
+    });
+  },
+
+  // Save to server
   onSave: function() {
     var self = this;
     self._ensureLogin().then(function() {
@@ -363,10 +401,13 @@ Page({
       }
       return renderer.canvasToTempFile(self._canvas);
     }).then(function(tempPath) {
-      self._shareImage = tempPath;
       self.setData({ sending: false });
-      wx.showShareMenu({ withShareTicket: true });
-      wx.showToast({ title: '已保存，点击右上角分享', icon: 'none', duration: 2500 });
+      wx.showShareImageMenu({
+        path: tempPath,
+        fail: function() {
+          wx.showToast({ title: '分享取消', icon: 'none' });
+        },
+      });
     }).catch(function(err) {
       console.error('send error', err);
       wx.showToast({ title: '发送失败', icon: 'error' });
