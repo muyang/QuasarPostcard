@@ -119,13 +119,13 @@
 
 .grid {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   padding: 16rpx 24rpx;
   gap: 16rpx;
 }
 
 .grid-item {
-  width: calc(50% - 8rpx);
+  width: 100%;
 }
 
 .delete-bar {

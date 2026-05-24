@@ -77,6 +77,13 @@ Page({
         console.error('Parse card data failed', e);
       }
     }
+    // Auto-fill sender name with WeChat nickname when logged in
+    var app = getApp();
+    var design = initData.design || {};
+    if (app.isLoggedIn() && !design.from_name) {
+      design.from_name = app.globalData.nickname || '';
+      initData.design = design;
+    }
     this.setData(initData);
     this.loadMaterials();
   },

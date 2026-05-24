@@ -1,20 +1,16 @@
 <view class="login-page" style="padding-top: {{statusBarHeight}}px;">
+  <!-- Loading spinner -->
   <view wx:if="{{!ready}}" class="loading-box">
     <view class="spinner"></view>
   </view>
 
+  <!-- Login content: centered button + hint -->
   <block wx:else>
-    <view class="brand">
-      <text class="brand-icon">&#x1F48C;</text>
-      <text class="brand-title">明信片设计器</text>
-      <text class="brand-desc">设计专属明信片，传递温暖祝福</text>
-    </view>
-
-    <view class="actions">
+    <view class="login-center">
       <view class="wx-login-btn {{logging ? 'disabled' : ''}}" bindtap="onLogin">
         <text class="wx-login-text">{{logging ? '登录中...' : '微信登录'}}</text>
       </view>
-      <text class="skip-text" bindtap="onSkip">先逛逛</text>
+      <text class="login-hint">微信登录后可保存和分享明信片</text>
     </view>
   </block>
 </view>

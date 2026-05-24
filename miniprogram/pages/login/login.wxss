@@ -28,31 +28,7 @@
   to { transform: rotate(360deg); }
 }
 
-.brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 120rpx;
-}
-
-.brand-icon {
-  font-size: 120rpx;
-  margin-bottom: 32rpx;
-}
-
-.brand-title {
-  font-size: 48rpx;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 16rpx;
-}
-
-.brand-desc {
-  font-size: 28rpx;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.actions {
+.login-center {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -62,7 +38,7 @@
 .wx-login-btn {
   width: 100%;
   max-width: 600rpx;
-  padding: 24rpx 0;
+  padding: 28rpx 0;
   background: #07C160;
   border-radius: 48rpx;
   text-align: center;
@@ -74,12 +50,13 @@
 
 .wx-login-text {
   color: #fff;
-  font-size: 32rpx;
+  font-size: 34rpx;
   font-weight: 600;
 }
 
-.skip-text {
-  margin-top: 32rpx;
+.login-hint {
+  margin-top: 24rpx;
   font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
 }
