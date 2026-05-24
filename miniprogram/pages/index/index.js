@@ -23,6 +23,7 @@ Page({
     selectedIds: [],
     deleting: false,
     loggedIn: false,
+    logging: false,
     statusBarHeight: 20,
     navRight: 16,
     navHeight: 44,
@@ -36,14 +37,36 @@ Page({
       navRight: g.screenWidth - g.capsuleLeft + 12,
       navHeight: g.capsuleTop - g.statusBarHeight + g.capsuleHeight + 12,
     });
+    var self = this;
+    app.checkSession().then(function(loggedIn) {
+      self.setData({ loggedIn: loggedIn });
+      if (loggedIn) {
+        self.loadData();
+      } else {
+        self.setData({ loading: false });
+      }
+    });
   },
 
   onShow: function() {
-    this.checkLoginStatus();
-    this.loadData();
+    // Only refresh if already resolved (not first load)
+    if (this._loaded) {
+      var loggedIn = getApp().isLoggedIn();
+      this.setData({ loggedIn: loggedIn });
+      if (loggedIn) {
+        this.loadData();
+      } else {
+        this.setData({ loading: false, postcards: [], error: '' });
+      }
+    }
+    this._loaded = true;
   },
 
   onPullDownRefresh: function() {
+    if (!this.data.loggedIn) {
+      wx.stopPullDownRefresh();
+      return;
+    }
     this.loadData().then(function() {
       wx.stopPullDownRefresh();
     });
@@ -164,7 +187,12 @@ Page({
         if (res.confirm) {
           auth.logout();
           getApp().globalData.loggedIn = false;
-          self.setData({ loggedIn: false });
+          self.setData({
+            loggedIn: false,
+            postcards: [],
+            selectMode: false,
+            selectedIds: [],
+          });
         }
       },
     });
@@ -172,19 +200,14 @@ Page({
 
   onLogin: function() {
     var self = this;
-    wx.showLoading({ title: '登录中...' });
+    if (self.data.logging) return;
+    self.setData({ logging: true });
     getApp().login().then(function() {
-      wx.hideLoading();
-      wx.showToast({ title: '登录成功', icon: 'success' });
-      self.setData({ loggedIn: true });
+      self.setData({ loggedIn: true, logging: false });
       self.loadData();
     }).catch(function() {
-      wx.hideLoading();
-      wx.showToast({ title: '登录失败', icon: 'error' });
+      wx.showToast({ title: '登录失败，请重试', icon: 'none' });
+      self.setData({ logging: false });
     });
-  },
-
-  checkLoginStatus: function() {
-    this.setData({ loggedIn: getApp().isLoggedIn() });
   },
 });

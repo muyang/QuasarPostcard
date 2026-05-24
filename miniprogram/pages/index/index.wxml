@@ -14,22 +14,28 @@ function findTemplate(templateId, templates) {
 module.exports = { isSelected: isSelected, findTemplate: findTemplate };
 </wxs>
 
-<!-- Navigation bar -->
-<view class="nav-bar" style="padding-top: {{statusBarHeight}}px; padding-right: {{navRight}}px; height: {{navHeight}}px;">
+<!-- Navigation bar (logged in only) -->
+<view wx:if="{{loggedIn}}" class="nav-bar" style="padding-top: {{statusBarHeight}}px; padding-right: {{navRight}}px; height: {{navHeight}}px;">
   <text class="nav-title">明信片</text>
   <view class="nav-actions">
     <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onSelectAll">全选</text>
     <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onCancelSelect">取消</text>
-    <text wx:elif="{{!loggedIn}}" class="nav-btn login-btn" bindtap="onLogin">登录</text>
-    <text wx:else class="nav-btn" bindtap="onLogout">退出</text>
   </view>
 </view>
 
-<!-- Login prompt banner -->
-<view wx:if="{{!loggedIn && !loading}}" class="login-banner" bindtap="onLogin">
-  <text class="login-icon">🔐</text>
-  <text class="login-hint">微信登录后可保存和分享明信片</text>
-  <text class="login-arrow">›</text>
+<!-- ===== Not logged in: centered login ===== -->
+<view wx:if="{{!loggedIn && !loading}}" class="login-state">
+  <view class="login-icons">
+    <text class="login-emoji">📮</text>
+    <text class="login-emoji">💌</text>
+    <text class="login-emoji">✉️</text>
+  </view>
+  <view class="login-center">
+    <view class="wx-login-btn {{logging ? 'disabled' : ''}}" bindtap="onLogin">
+      <text class="wx-login-text">{{logging ? '登录中...' : '微信登录'}}</text>
+    </view>
+    <text class="login-hint">微信登录后可保存和分享明信片</text>
+  </view>
 </view>
 
 <!-- Loading state -->
@@ -39,22 +45,22 @@ module.exports = { isSelected: isSelected, findTemplate: findTemplate };
 </view>
 
 <!-- Error state -->
-<view wx:elif="{{error}}" class="center-box">
+<view wx:elif="{{error && loggedIn}}" class="center-box">
   <text class="error-text">{{error}}</text>
   <view class="retry-btn" bindtap="loadData">
     <text class="retry-text">重试</text>
   </view>
 </view>
 
-<!-- Empty state -->
-<view wx:elif="{{postcards.length === 0}}" class="center-box">
+<!-- Empty state (logged in but no postcards) -->
+<view wx:elif="{{loggedIn && postcards.length === 0}}" class="center-box">
   <text class="empty-icon">📮</text>
   <text class="empty-text">还没有明信片</text>
   <text class="empty-hint">点击下方按钮创建第一张</text>
 </view>
 
-<!-- Postcard grid -->
-<view wx:else class="grid">
+<!-- Postcard grid (logged in) -->
+<view wx:elif="{{loggedIn}}" class="grid">
   <view wx:for="{{postcards}}" wx:key="id" class="grid-item">
     <postcard-tile
       postcard="{{item}}"
@@ -67,14 +73,19 @@ module.exports = { isSelected: isSelected, findTemplate: findTemplate };
   </view>
 </view>
 
-<!-- Delete bar (select mode) -->
+<!-- Delete bar (select mode, logged in) -->
 <view wx:if="{{selectMode && selectedIds.length > 0}}" class="delete-bar">
   <view class="delete-btn {{deleting ? 'disabled' : ''}}" bindtap="onDeleteSelected">
     <text class="delete-text">{{deleting ? '删除中...' : '删除 (' + selectedIds.length + ')'}}</text>
   </view>
 </view>
 
-<!-- FAB -->
-<view wx:if="{{!selectMode}}" class="fab" bindtap="onCreateNew">
+<!-- Bottom-left: login / logout button -->
+<view class="bottom-left-btn" bindtap="{{loggedIn ? 'onLogout' : 'onLogin'}}">
+  <text class="bottom-btn-text">{{logging ? '登录中...' : (loggedIn ? '退出' : '登录')}}</text>
+</view>
+
+<!-- FAB (logged in only) -->
+<view wx:if="{{loggedIn && !selectMode}}" class="fab" bindtap="onCreateNew">
   <text class="fab-icon">+</text>
 </view>
