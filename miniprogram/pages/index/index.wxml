@@ -25,10 +25,9 @@ module.exports = { isSelected: isSelected, findTemplate: findTemplate };
 
 <!-- ===== Not logged in: centered login ===== -->
 <view wx:if="{{!loggedIn && !loading}}" class="login-state">
-  <view class="login-icons">
-    <text class="login-emoji">📮</text>
-    <text class="login-emoji">💌</text>
-    <text class="login-emoji">✉️</text>
+  <view class="login-brand">
+    <image class="brand-logo" src="/images/logo_28x28.png" mode="aspectFit" />
+    <text class="brand-name">MiowlCard</text>
   </view>
   <view class="login-center">
     <view class="wx-login-btn {{logging ? 'disabled' : ''}}" bindtap="onLogin">
@@ -80,9 +79,9 @@ module.exports = { isSelected: isSelected, findTemplate: findTemplate };
   </view>
 </view>
 
-<!-- Bottom-left: login / logout button -->
-<view class="bottom-left-btn" bindtap="{{loggedIn ? 'onLogout' : 'onLogin'}}">
-  <text class="bottom-btn-text">{{logging ? '登录中...' : (loggedIn ? '退出' : '登录')}}</text>
+<!-- Bottom-left: logout button (logged in only) -->
+<view wx:if="{{loggedIn}}" class="bottom-left-btn" bindtap="onLogout">
+  <text class="bottom-btn-text">退出</text>
 </view>
 
 <!-- FAB (logged in only) -->
