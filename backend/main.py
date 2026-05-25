@@ -141,14 +141,20 @@ async def serve_image(file_path: str, size: str = ""):
     Supports ?size=thumb (200px) or ?size=small (600px) for thumbnails."""
     full_path = osp.join("static", file_path)
 
-    # Thumbnail support: /api/images/cards/abc.png?size=thumb -> static/cards/abc_thumb.png
+    # Thumbnail support: prefer WebP, fall back to original extension
     if size in ("thumb", "small"):
         base_dir = osp.dirname(full_path)
         base_name = osp.basename(full_path)
         stem, ext = osp.splitext(base_name)
-        thumb_path = osp.join(base_dir, f"{stem}_{size}{ext}")
-        if osp.isfile(thumb_path):
-            full_path = thumb_path
+        # New uploads generate .webp thumbnails — prefer those
+        webp_path = osp.join(base_dir, f"{stem}_{size}.webp")
+        if osp.isfile(webp_path):
+            full_path = webp_path
+        else:
+            # Fall back to legacy same-extension thumbnail
+            thumb_path = osp.join(base_dir, f"{stem}_{size}{ext}")
+            if osp.isfile(thumb_path):
+                full_path = thumb_path
 
     if not osp.isfile(full_path):
         from fastapi import HTTPException

@@ -27,6 +27,14 @@ def _save_image(im, path, fmt="JPEG"):
         im.save(path, format="JPEG", quality=85, optimize=True)
 
 
+def _save_thumbnail(im, path):
+    """Save thumbnail as WebP — lossless for RGBA, lossy for RGB."""
+    if im.mode == "RGBA":
+        im.save(path, format="WEBP", lossless=True)
+    else:
+        im.save(path, format="WEBP", quality=82)
+
+
 @router.post("/image")
 async def upload_image(
     file: UploadFile = File(...),
@@ -50,13 +58,13 @@ async def upload_image(
     fmt = "JPEG" if ext in (".jpg", ".jpeg") else "PNG"
     _save_image(im, filepath, fmt)
 
-    # Generate thumbnails
+    # Generate thumbnails as WebP for faster loading
     for suffix, size in THUMB_SIZES.items():
         tw, th = im.size
         ratio = size / max(tw, th)
         thumb = im.resize((int(tw * ratio), int(th * ratio)), Image.LANCZOS)
-        thumb_path = os.path.join(UPLOAD_DIR, f"{base}_{suffix}{ext}")
-        _save_image(thumb, thumb_path, fmt)
+        thumb_path = os.path.join(UPLOAD_DIR, f"{base}_{suffix}.webp")
+        _save_thumbnail(thumb, thumb_path)
 
     url = f"/static/cards/{filename}"
     return {"success": True, "url": url}

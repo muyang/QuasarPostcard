@@ -66,9 +66,9 @@ function parseTemplate(tpl) {
 
 function preloadImages(tpl, stamp, postmark) {
   var urls = [];
-  if (tpl.imageUrl) urls.push(api.imageUrl(tpl.imageUrl));
-  if (stamp && stamp.image_url) urls.push(api.imageUrl(stamp.image_url));
-  if (postmark && postmark.image_url) urls.push(api.imageUrl(postmark.image_url));
+  if (tpl.imageUrl) urls.push(api.imageUrl(tpl.imageUrl, 'small'));
+  if (stamp && stamp.image_url) urls.push(api.imageUrl(stamp.image_url, 'small'));
+  if (postmark && postmark.image_url) urls.push(api.imageUrl(postmark.image_url, 'small'));
   return Promise.all(urls.map(function(u) {
     return imageCache.loadImage(u).catch(function() { return ''; });
   }));
@@ -133,7 +133,7 @@ function drawGradient(ctx, tpl, w, h) {
 // Layer 3: Template background image
 function drawBackgroundImage(ctx, canvas, tpl, w, h) {
   if (!tpl.imageUrl) return Promise.resolve();
-  var url = api.imageUrl(tpl.imageUrl);
+  var url = api.imageUrl(tpl.imageUrl, 'small');
   return imageCache.loadImage(url).then(function(localPath) {
     if (!localPath) return;
     var img = canvas.createImage();
@@ -248,7 +248,7 @@ function drawPostmarkElement(ctx, canvas, tpl, postmark, w, h) {
   }
 
   if (postmark.image_url) {
-    var url = api.imageUrl(postmark.image_url);
+    var url = api.imageUrl(postmark.image_url, 'small');
     return imageCache.loadImage(url).then(function(localPath) {
       if (localPath) {
         var img = canvas.createImage();
@@ -363,7 +363,7 @@ function drawStampElement(ctx, canvas, tpl, stamp, w, h) {
   }
 
   if (stamp.image_url) {
-    var url = api.imageUrl(stamp.image_url);
+    var url = api.imageUrl(stamp.image_url, 'small');
     return imageCache.loadImage(url).then(function(localPath) {
       if (localPath) {
         var img = canvas.createImage();
