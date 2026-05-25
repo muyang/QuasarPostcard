@@ -15,11 +15,16 @@ THUMB_SIZES = {"thumb": 200, "small": 600}
 
 
 def _save_image(im, path, fmt="JPEG"):
-    if im.mode == "RGBA":
-        bg = Image.new("RGB", im.size, (255, 255, 255))
-        bg.paste(im, mask=im.split()[3])
-        im = bg
-    im.save(path, format=fmt, quality=85, optimize=True)
+    if fmt == "PNG" and im.mode == "RGBA":
+        im.save(path, format="PNG", optimize=True)
+    elif fmt == "PNG":
+        im.save(path, format="PNG", optimize=True)
+    else:
+        if im.mode == "RGBA":
+            bg = Image.new("RGB", im.size, (255, 255, 255))
+            bg.paste(im, mask=im.split()[3])
+            im = bg
+        im.save(path, format="JPEG", quality=85, optimize=True)
 
 
 @router.post("/image")
