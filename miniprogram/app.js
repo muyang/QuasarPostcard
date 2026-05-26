@@ -11,7 +11,7 @@ App({
     templates: [],
     stamps: [],
     postmarks: [],
-    serverUrl: 'https://postcard.hn.takin.cc',
+    serverUrl: 'https://card.qpvisiontech.com',
     loggedIn: false,
     loginPromise: null,
     statusBarHeight: 0,

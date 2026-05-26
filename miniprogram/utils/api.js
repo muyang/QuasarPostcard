@@ -1,4 +1,4 @@
-var BASE_URL = 'https://postcard.hn.takin.cc';
+var BASE_URL = 'https://card.qpvisiontech.com';
 var TOKEN = '';
 
 function setToken(token) {
