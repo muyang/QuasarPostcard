@@ -64,21 +64,33 @@ function parseTemplate(tpl) {
   };
 }
 
-function preloadImages(tpl, stamp, postmark) {
+function preloadImages(tpl, stamp, postmark, imgSize) {
+  var size = imgSize || 'small';
   var urls = [];
-  if (tpl.imageUrl) urls.push(api.imageUrl(tpl.imageUrl, 'small'));
-  if (stamp && stamp.image_url) urls.push(api.imageUrl(stamp.image_url, 'small'));
-  if (postmark && postmark.image_url) urls.push(api.imageUrl(postmark.image_url, 'small'));
+  if (tpl.imageUrl) urls.push(api.imageUrl(tpl.imageUrl, size));
+  if (stamp && stamp.image_url) urls.push(api.imageUrl(stamp.image_url, size));
+  if (postmark && postmark.image_url) urls.push(api.imageUrl(postmark.image_url, size));
   return Promise.all(urls.map(function(u) {
     return imageCache.loadImage(u).catch(function() { return ''; });
   }));
 }
 
-function drawPostcard(canvas, design, scaleFactor) {
+function drawPostcard(canvas, design, opts) {
   if (!canvas) return Promise.resolve();
 
+  var scale, imgSize;
+  if (typeof opts === 'number') {
+    scale = opts;
+    imgSize = 'small';
+  } else if (opts && typeof opts === 'object') {
+    scale = opts.scale || constants.getDpr();
+    imgSize = opts.imgSize || 'small';
+  } else {
+    scale = constants.getDpr();
+    imgSize = 'small';
+  }
+
   var ctx = canvas.getContext('2d');
-  var scale = scaleFactor || constants.getDpr();
   var w = CANVAS_W;
   var h = CANVAS_H;
 
@@ -94,15 +106,15 @@ function drawPostcard(canvas, design, scaleFactor) {
   var fromName = design.fromName || '';
   var message = design.message || '';
 
-  return preloadImages(tpl, stamp, postmark).then(function() {
+  return preloadImages(tpl, stamp, postmark, imgSize).then(function() {
     ctx.clearRect(0, 0, w, h);
     drawGradient(ctx, tpl, w, h);
-    return drawBackgroundImage(ctx, canvas, tpl, w, h);
+    return drawBackgroundImage(ctx, canvas, tpl, w, h, imgSize);
   }).then(function() {
     drawDecoration(ctx, tpl, w, h);
-    return drawStampElement(ctx, canvas, tpl, stamp, w, h);
+    return drawStampElement(ctx, canvas, tpl, stamp, w, h, imgSize);
   }).then(function() {
-    return drawPostmarkElement(ctx, canvas, tpl, postmark, w, h);
+    return drawPostmarkElement(ctx, canvas, tpl, postmark, w, h, imgSize);
   }).then(function() {
     drawTextField(ctx, '寄件人', fromName, tpl.fromColor, tpl.fromFont, tpl.fromSize,
       tpl.fromX, tpl.fromY, tpl.fromW, tpl.fromH,
@@ -131,9 +143,9 @@ function drawGradient(ctx, tpl, w, h) {
 }
 
 // Layer 3: Template background image
-function drawBackgroundImage(ctx, canvas, tpl, w, h) {
+function drawBackgroundImage(ctx, canvas, tpl, w, h, imgSize) {
   if (!tpl.imageUrl) return Promise.resolve();
-  var url = api.imageUrl(tpl.imageUrl, 'small');
+  var url = api.imageUrl(tpl.imageUrl, imgSize || 'small');
   return imageCache.loadImage(url).then(function(localPath) {
     if (!localPath) return;
     var img = canvas.createImage();
@@ -235,7 +247,7 @@ function drawWavePattern(ctx, w, h) {
 }
 
 // Layer 5: Postmark
-function drawPostmarkElement(ctx, canvas, tpl, postmark, w, h) {
+function drawPostmarkElement(ctx, canvas, tpl, postmark, w, h, imgSize) {
   var pmkScl = tpl.postmarkScale / 100;
   var pmkSize = 72 * pmkScl;
   var rotRad = tpl.postmarkRotation * Math.PI / 180;
@@ -248,7 +260,7 @@ function drawPostmarkElement(ctx, canvas, tpl, postmark, w, h) {
   }
 
   if (postmark.image_url) {
-    var url = api.imageUrl(postmark.image_url, 'small');
+    var url = api.imageUrl(postmark.image_url, imgSize || 'small');
     return imageCache.loadImage(url).then(function(localPath) {
       if (localPath) {
         var img = canvas.createImage();
@@ -349,7 +361,7 @@ function drawDashedCircle(ctx, cx, cy, radius) {
 }
 
 // Layer 6: Stamp
-function drawStampElement(ctx, canvas, tpl, stamp, w, h) {
+function drawStampElement(ctx, canvas, tpl, stamp, w, h, imgSize) {
   var stScl = tpl.stampScale / 100;
   var stW = 52 * stScl;
   var stH = 62 * stScl;
@@ -363,7 +375,7 @@ function drawStampElement(ctx, canvas, tpl, stamp, w, h) {
   }
 
   if (stamp.image_url) {
-    var url = api.imageUrl(stamp.image_url, 'small');
+    var url = api.imageUrl(stamp.image_url, imgSize || 'small');
     return imageCache.loadImage(url).then(function(localPath) {
       if (localPath) {
         var img = canvas.createImage();
@@ -569,12 +581,13 @@ function canvasToTempFile(canvas) {
 }
 
 // Export high-res image using offscreen canvas for save/share
+// Uses full-resolution source images and 6x scale for sharp output on high-DPI phones
 function exportHiRes(design) {
   var exportW = constants.EXPORT_W;
   var exportH = constants.EXPORT_H;
   var offscreen = wx.createOffscreenCanvas({ type: '2d', width: exportW, height: exportH });
 
-  return drawPostcard(offscreen, design, constants.EXPORT_SCALE).then(function() {
+  return drawPostcard(offscreen, design, { scale: constants.EXPORT_SCALE, imgSize: null }).then(function() {
     return new Promise(function(resolve, reject) {
       wx.canvasToTempFilePath({
         canvas: offscreen,
@@ -582,7 +595,7 @@ function exportHiRes(design) {
         width: exportW, height: exportH,
         destWidth: exportW, destHeight: exportH,
         fileType: 'jpg',
-        quality: 0.92,
+        quality: 0.95,
         success: function(res) { resolve(res.tempFilePath); },
         fail: reject,
       });
