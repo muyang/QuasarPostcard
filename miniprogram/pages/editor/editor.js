@@ -298,7 +298,7 @@ Page({
     if (self.data.saving) return;
     self.setData({ saving: true });
 
-    renderer.canvasToTempFile(self._canvas).then(function(tempPath) {
+    renderer.exportHiRes(self.getDesignForRender()).then(function(tempPath) {
       return new Promise(function(resolve, reject) {
         wx.saveImageToPhotosAlbum({
           filePath: tempPath,
@@ -406,7 +406,7 @@ Page({
         design.status = 'SENT';
         self.setData({ design: design });
       }
-      return renderer.canvasToTempFile(self._canvas);
+      return renderer.exportHiRes(self.getDesignForRender());
     }).then(function(tempPath) {
       self.setData({ sending: false });
       wx.showShareImageMenu({

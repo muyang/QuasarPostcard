@@ -74,17 +74,17 @@ function preloadImages(tpl, stamp, postmark) {
   }));
 }
 
-function drawPostcard(canvas, design) {
+function drawPostcard(canvas, design, scaleFactor) {
   if (!canvas) return Promise.resolve();
 
   var ctx = canvas.getContext('2d');
-  var dpr = constants.getDpr();
+  var scale = scaleFactor || constants.getDpr();
   var w = CANVAS_W;
   var h = CANVAS_H;
 
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  ctx.scale(dpr, dpr);
+  canvas.width = w * scale;
+  canvas.height = h * scale;
+  ctx.scale(scale, scale);
 
   var rawTpl = design.template || {};
   var tpl = parseTemplate(rawTpl);
@@ -568,9 +568,32 @@ function canvasToTempFile(canvas) {
   });
 }
 
+// Export high-res image using offscreen canvas for save/share
+function exportHiRes(design) {
+  var exportW = constants.EXPORT_W;
+  var exportH = constants.EXPORT_H;
+  var offscreen = wx.createOffscreenCanvas({ type: '2d', width: exportW, height: exportH });
+
+  return drawPostcard(offscreen, design, constants.EXPORT_SCALE).then(function() {
+    return new Promise(function(resolve, reject) {
+      wx.canvasToTempFilePath({
+        canvas: offscreen,
+        x: 0, y: 0,
+        width: exportW, height: exportH,
+        destWidth: exportW, destHeight: exportH,
+        fileType: 'jpg',
+        quality: 0.92,
+        success: function(res) { resolve(res.tempFilePath); },
+        fail: reject,
+      });
+    });
+  });
+}
+
 module.exports = {
   drawPostcard: drawPostcard,
   canvasToTempFile: canvasToTempFile,
+  exportHiRes: exportHiRes,
   CANVAS_W: CANVAS_W,
   CANVAS_H: CANVAS_H,
 };

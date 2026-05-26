@@ -3,6 +3,11 @@ const CANVAS_W = 420;
 const CANVAS_H = 270;
 const ASPECT_RATIO = CANVAS_W / CANVAS_H; // 14:9
 
+// Export scale factor — renders at 4x logical size for sharp output
+const EXPORT_SCALE = 4;
+const EXPORT_W = CANVAS_W * EXPORT_SCALE; // 1680
+const EXPORT_H = CANVAS_H * EXPORT_SCALE; // 1080
+
 // Device pixel ratio
 function getDpr() {
   return wx.getSystemInfoSync().pixelRatio || 2;
@@ -45,6 +50,9 @@ module.exports = {
   CANVAS_W,
   CANVAS_H,
   ASPECT_RATIO,
+  EXPORT_SCALE,
+  EXPORT_W,
+  EXPORT_H,
   getDpr,
   parseColor,
   getGradientColors,
