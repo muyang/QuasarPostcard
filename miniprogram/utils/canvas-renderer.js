@@ -65,7 +65,7 @@ function parseTemplate(tpl) {
 }
 
 function preloadImages(tpl, stamp, postmark, imgSize) {
-  var size = imgSize || 'small';
+  var size = imgSize !== undefined ? imgSize : 'small';
   var urls = [];
   if (tpl.imageUrl) urls.push(api.imageUrl(tpl.imageUrl, size));
   if (stamp && stamp.image_url) urls.push(api.imageUrl(stamp.image_url, size));
@@ -84,7 +84,7 @@ function drawPostcard(canvas, design, opts) {
     imgSize = 'small';
   } else if (opts && typeof opts === 'object') {
     scale = opts.scale || constants.getDpr();
-    imgSize = opts.imgSize || 'small';
+    imgSize = opts.imgSize !== undefined ? opts.imgSize : 'small';
   } else {
     scale = constants.getDpr();
     imgSize = 'small';
@@ -145,7 +145,7 @@ function drawGradient(ctx, tpl, w, h) {
 // Layer 3: Template background image
 function drawBackgroundImage(ctx, canvas, tpl, w, h, imgSize) {
   if (!tpl.imageUrl) return Promise.resolve();
-  var url = api.imageUrl(tpl.imageUrl, imgSize || 'small');
+  var url = api.imageUrl(tpl.imageUrl, imgSize !== undefined ? imgSize : 'small');
   return imageCache.loadImage(url).then(function(localPath) {
     if (!localPath) return;
     var img = canvas.createImage();
@@ -260,7 +260,7 @@ function drawPostmarkElement(ctx, canvas, tpl, postmark, w, h, imgSize) {
   }
 
   if (postmark.image_url) {
-    var url = api.imageUrl(postmark.image_url, imgSize || 'small');
+    var url = api.imageUrl(postmark.image_url, imgSize !== undefined ? imgSize : 'small');
     return imageCache.loadImage(url).then(function(localPath) {
       if (localPath) {
         var img = canvas.createImage();
@@ -375,7 +375,7 @@ function drawStampElement(ctx, canvas, tpl, stamp, w, h, imgSize) {
   }
 
   if (stamp.image_url) {
-    var url = api.imageUrl(stamp.image_url, imgSize || 'small');
+    var url = api.imageUrl(stamp.image_url, imgSize !== undefined ? imgSize : 'small');
     return imageCache.loadImage(url).then(function(localPath) {
       if (localPath) {
         var img = canvas.createImage();
@@ -595,7 +595,7 @@ function exportHiRes(design) {
         width: exportW, height: exportH,
         destWidth: exportW, destHeight: exportH,
         fileType: 'jpg',
-        quality: 0.95,
+        quality: 1.0,
         success: function(res) { resolve(res.tempFilePath); },
         fail: reject,
       });
