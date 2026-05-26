@@ -47,6 +47,8 @@ server {
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers off;
 
+    client_max_body_size 20M;
+
     location / {
         proxy_pass http://postcard:8100;
         proxy_set_header Host $host;
