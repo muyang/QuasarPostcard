@@ -1,0 +1,9 @@
+{
+  "usingComponents": {
+    "step-indicator": "/components/step-indicator/step-indicator",
+    "template-picker": "/components/template-picker/template-picker",
+    "stamp-picker": "/components/stamp-picker/stamp-picker",
+    "postmark-picker": "/components/postmark-picker/postmark-picker"
+  },
+  "disableScroll": true
+}

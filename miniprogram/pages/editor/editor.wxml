@@ -1,0 +1,220 @@
+<view class="editor-page">
+  <!-- Header -->
+  <view class="header" style="padding-top: {{statusBarHeight}}px; height: {{navHeight}}px;">
+    <text class="header-title">明信片设计器</text>
+  </view>
+
+  <!-- Canvas -->
+  <view class="canvas-wrap">
+    <view class="canvas-inner" style="width: {{canvasW}}px; height: {{canvasH}}px;">
+      <canvas
+        id="postcard-canvas"
+        type="2d"
+        class="canvas"
+        style="width: {{canvasW}}px; height: {{canvasH}}px;"
+        bindtouchstart="onCanvasTouch"
+      ></canvas>
+      <!-- Text edit hint overlay -->
+      <view wx:if="{{showTextHint}}" class="text-hint-overlay">
+        <text class="text-hint-text">点击文字区域即可编辑</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Step panel -->
+  <view class="panel">
+    <step-indicator current="{{step}}" bind:stepchange="onStepChange" />
+
+    <view class="divider"></view>
+
+    <!-- Step 0: Template -->
+    <scroll-view wx:if="{{step === 0}}" scroll-y class="step-content">
+      <template-picker
+        templates="{{templates}}"
+        selected="{{design.template_id}}"
+        loading="{{loading}}"
+        bind:select="onTemplateSelect"
+      />
+      <view class="step-nav">
+        <view class="spacer"></view>
+        <view class="btn-primary" bindtap="onNextStep">
+          <text class="btn-text">下一步</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- Step 1: Text -->
+    <scroll-view wx:elif="{{step === 1}}" scroll-y class="step-content">
+      <view class="text-step">
+        <text class="section-title">填写明信片信息</text>
+        <view class="input-row">
+          <text class="input-label">收件人</text>
+          <input
+            class="text-input"
+            placeholder="收件人名字"
+            value="{{design.to_name}}"
+            bindinput="onToInput"
+            maxlength="20"
+          />
+        </view>
+        <view class="input-row">
+          <text class="input-label">寄件人</text>
+          <input
+            class="text-input"
+            placeholder="寄件人名字"
+            value="{{design.from_name}}"
+            bindinput="onFromInput"
+            maxlength="20"
+          />
+        </view>
+        <text class="section-title msg-title">祝福语</text>
+        <textarea
+          class="msg-input"
+          placeholder="写下你想说的话…"
+          value="{{design.message}}"
+          bindinput="onMessageInput"
+          maxlength="200"
+          auto-height
+        />
+      </view>
+      <view class="step-nav">
+        <view class="btn-outline" bindtap="onPrevStep">
+          <text class="btn-outline-text">上一步</text>
+        </view>
+        <view class="btn-primary" bindtap="onNextStep">
+          <text class="btn-text">下一步</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- Step 2: Stamp -->
+    <scroll-view wx:elif="{{step === 2}}" scroll-y class="step-content">
+      <stamp-picker
+        stamps="{{stamps}}"
+        selected="{{design.stamp_id}}"
+        loading="{{loading}}"
+        bind:select="onStampSelect"
+      />
+      <view class="step-nav">
+        <view class="btn-outline" bindtap="onPrevStep">
+          <text class="btn-outline-text">上一步</text>
+        </view>
+        <view class="btn-primary" bindtap="onNextStep">
+          <text class="btn-text">下一步</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- Step 3: Postmark -->
+    <scroll-view wx:elif="{{step === 3}}" scroll-y class="step-content">
+      <postmark-picker
+        postmarks="{{postmarks}}"
+        selected="{{design.postmark_id}}"
+        loading="{{loading}}"
+        bind:select="onPostmarkSelect"
+      />
+      <view class="step-nav">
+        <view class="btn-outline" bindtap="onPrevStep">
+          <text class="btn-outline-text">上一步</text>
+        </view>
+        <view class="btn-primary" bindtap="onNextStep">
+          <text class="btn-text">下一步</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- Step 4: Send -->
+    <scroll-view wx:elif="{{step === 4}}" scroll-y class="step-content">
+      <view class="send-step">
+        <view class="send-loading">
+          <text class="send-loading-icon">📮</text>
+          <text class="send-loading-text">{{sending ? '正在准备明信片...' : '正在准备分享...'}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- Bottom toolbar -->
+  <view class="bottom-toolbar">
+    <view class="toolbar-btn toolbar-back" bindtap="onGoBack">
+      <text class="toolbar-btn-text">← 返回</text>
+    </view>
+    <view class="toolbar-btn toolbar-save {{saving ? 'disabled' : ''}}" bindtap="onSaveToAlbum">
+      <text class="toolbar-btn-text">{{saving ? '保存中...' : '保存到相册'}}</text>
+    </view>
+  </view>
+
+  <!-- Text edit modal -->
+  <view wx:if="{{textEditorVisible}}" class="text-edit-modal">
+    <view class="text-edit-overlay" bindtap="onTextEditCancel"></view>
+    <view class="text-edit-panel">
+      <view class="text-edit-header">
+        <text class="text-edit-title">{{textEditField === 'to_name' ? '收件人' : textEditField === 'from_name' ? '寄件人' : '祝福语'}}</text>
+        <text class="text-edit-close" bindtap="onTextEditCancel">✕</text>
+      </view>
+      <view class="text-edit-body">
+        <textarea
+          wx:if="{{textEditField === 'message'}}"
+          class="text-edit-input text-edit-textarea"
+          placeholder="写下你想说的话…"
+          value="{{textEditValue}}"
+          bindinput="onTextEditInput"
+          maxlength="200"
+          auto-height
+        />
+        <input
+          wx:else
+          class="text-edit-input"
+          placeholder="{{textEditField === 'to_name' ? '收件人名字' : '寄件人名字'}}"
+          value="{{textEditValue}}"
+          bindinput="onTextEditInput"
+        />
+        <view class="text-edit-styles">
+          <text class="text-edit-style-label">字体</text>
+          <view class="text-edit-fonts">
+            <view
+              wx:for="{{fontOptions}}"
+              wx:key="*this"
+              class="text-edit-font-item {{textEditFont === item ? 'active' : ''}}"
+              bindtap="onFontSelect"
+              data-font="{{item}}"
+            >
+              <text class="text-edit-font-text" style="font-family: {{item}};">{{item === 'sans-serif' ? '默认' : item === 'serif' ? '宋体' : item === 'monospace' ? '等宽' : '楷体'}}</text>
+            </view>
+          </view>
+          <text class="text-edit-style-label">字号</text>
+          <view class="text-edit-sizes">
+            <view
+              wx:for="{{sizeOptions}}"
+              wx:key="value"
+              class="text-edit-size-item {{textEditSize === item.value ? 'active' : ''}}"
+              bindtap="onSizeSelect"
+              data-size="{{item.value}}"
+            >
+              <text class="text-edit-size-text" style="font-size: {{item.label}}rpx;">{{item.label}}</text>
+            </view>
+          </view>
+          <text class="text-edit-style-label">颜色</text>
+          <view class="text-edit-colors">
+            <view
+              wx:for="{{colorOptions}}"
+              wx:key="*this"
+              class="text-edit-color-item {{textEditColor === item ? 'active' : ''}}"
+              style="background-color: {{item}};"
+              bindtap="onColorSelect"
+              data-color="{{item}}"
+            ></view>
+          </view>
+        </view>
+      </view>
+      <view class="text-edit-actions">
+        <view class="text-edit-btn text-edit-cancel" bindtap="onTextEditCancel">
+          <text class="text-edit-btn-text">取消</text>
+        </view>
+        <view class="text-edit-btn text-edit-confirm" bindtap="onTextEditConfirm">
+          <text class="text-edit-btn-text">确认</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

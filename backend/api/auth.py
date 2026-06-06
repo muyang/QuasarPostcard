@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 
 from database import get_db
-from models import AdminUser
+from models import AdminUser, AppUser
 from schemas import LoginRequest, LoginResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -37,12 +37,30 @@ def create_default_admin(db: Session):
         db.commit()
 
 
+def verify_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Accept any valid token (admin or wechat user)."""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        sub = payload.get("sub")
+        if sub is None:
+            raise HTTPException(status_code=401, detail="无效的认证令牌")
+        return {
+            "sub": sub,
+            "type": payload.get("type", "admin"),
+            "user_id": payload.get("user_id"),
+        }
+    except JWTError:
+        raise HTTPException(status_code=401, detail="无效的认证令牌")
+
+
 def verify_admin(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+    """Require admin-type token."""
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        if username is None:
-            raise HTTPException(status_code=401, detail="无效的认证令牌")
+        user_type = payload.get("type", "admin")
+        if username is None or user_type != "admin":
+            raise HTTPException(status_code=401, detail="需要管理员权限")
     except JWTError:
         raise HTTPException(status_code=401, detail="无效的认证令牌")
     return username
@@ -58,8 +76,26 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 
     expire = datetime.now(timezone.utc) + timedelta(days=TOKEN_EXPIRE_DAYS)
     token = jwt.encode(
-        {"sub": admin.username, "exp": expire},
+        {"sub": admin.username, "type": "admin", "exp": expire},
         SECRET_KEY,
         algorithm=ALGORITHM,
     )
     return LoginResponse(success=True, token=token, message="登录成功")
+
+
+@router.get("/me")
+def get_current_user(user=Depends(verify_user), db: Session = Depends(get_db)):
+    """Validate token and return current user info."""
+    if user["type"] == "wechat":
+        app_user = db.query(AppUser).filter(AppUser.id == user.get("user_id")).first()
+        return {
+            "authenticated": True,
+            "type": "wechat",
+            "nickname": app_user.nickname if app_user else None,
+            "avatar_url": app_user.avatar_url if app_user else None,
+        }
+    return {
+        "authenticated": True,
+        "type": "admin",
+        "username": user["sub"],
+    }

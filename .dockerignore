@@ -1,20 +1,37 @@
-.dart_tool/
-.dart_tool
-build/
-.git/
-.gitignore
-.idea/
-.vscode/
-*.iml
-.DS_Store
+# Python
 __pycache__/
 *.pyc
+*.pyo
+venv/
+.env
+
+# SQLite DB (persisted via volume)
+postcard.db
+*.db-journal
+*.db-wal
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Flutter source (not needed in backend image)
 android/
-ios/
-linux/
-macos/
-windows/
-test/
-backend/__pycache__/
-backend/*.db
-backend/static/cards/
+web/
+.dart_tool/
+build/
+.flutter-plugins*
+.metadata
+pubspec.*
+analysis_options.yaml
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Data volume mount point
+data/

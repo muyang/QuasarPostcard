@@ -1,0 +1,24 @@
+<view class="picker">
+  <view class="title">选择邮戳</view>
+  <view wx:if="{{loading && postmarks.length === 0}}" class="loading">
+    <view class="spinner"></view>
+  </view>
+  <view wx:else class="grid">
+    <view
+      wx:for="{{postmarks}}"
+      wx:key="id"
+      class="card {{selected === item.id ? 'selected' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="onSelect"
+    >
+      <image
+        wx:if="{{item.local_img}}"
+        class="pm-img"
+        src="{{item.local_img}}"
+        mode="aspectFit"
+      />
+      <text wx:else class="pm-icon">⭕</text>
+      <text class="pm-label">{{item.label}}</text>
+    </view>
+  </view>
+</view>

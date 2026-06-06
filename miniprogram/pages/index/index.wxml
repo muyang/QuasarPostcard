@@ -1,0 +1,90 @@
+<wxs module="helper">
+function isSelected(id, selectedIds) {
+  for (var i = 0; i < selectedIds.length; i++) {
+    if (selectedIds[i] === id) return true;
+  }
+  return false;
+}
+function findTemplate(templateId, templates) {
+  for (var i = 0; i < templates.length; i++) {
+    if (templates[i].id === templateId) return templates[i];
+  }
+  return { name: '明信片', gradient_from: 'FFF0F5', gradient_to: 'FFC0CB' };
+}
+module.exports = { isSelected: isSelected, findTemplate: findTemplate };
+</wxs>
+
+<!-- Navigation bar (logged in only) -->
+<view wx:if="{{loggedIn}}" class="nav-bar" style="padding-top: {{statusBarHeight}}px; padding-right: {{navRight}}px; height: {{navHeight}}px;">
+  <text class="nav-title">明信片</text>
+  <view class="nav-actions">
+    <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onSelectAll">全选</text>
+    <text wx:if="{{selectMode}}" class="nav-btn" bindtap="onCancelSelect">取消</text>
+  </view>
+</view>
+
+<!-- ===== Not logged in: centered login ===== -->
+<view wx:if="{{!loggedIn && !loading}}" class="login-state">
+  <view class="login-brand">
+    <image class="brand-logo" src="/images/logo_28x28.png" mode="aspectFit" />
+    <text class="brand-name">MiowlCard</text>
+  </view>
+  <view class="login-center">
+    <view class="wx-login-btn {{logging ? 'disabled' : ''}}" bindtap="onLogin">
+      <text class="wx-login-text">{{logging ? '登录中...' : '微信登录'}}</text>
+    </view>
+    <text class="login-hint">微信登录后可保存和分享明信片</text>
+  </view>
+</view>
+
+<!-- Loading state -->
+<view wx:if="{{loading}}" class="center-box">
+  <view class="spinner"></view>
+  <text class="hint-text">加载中...</text>
+</view>
+
+<!-- Error state -->
+<view wx:elif="{{error && loggedIn}}" class="center-box">
+  <text class="error-text">{{error}}</text>
+  <view class="retry-btn" bindtap="loadData">
+    <text class="retry-text">重试</text>
+  </view>
+</view>
+
+<!-- Empty state (logged in but no postcards) -->
+<view wx:elif="{{loggedIn && postcards.length === 0}}" class="center-box">
+  <text class="empty-icon">📮</text>
+  <text class="empty-text">还没有明信片</text>
+  <text class="empty-hint">点击下方按钮创建第一张</text>
+</view>
+
+<!-- Postcard grid (logged in) -->
+<view wx:elif="{{loggedIn}}" class="grid">
+  <view wx:for="{{postcards}}" wx:key="id" class="grid-item">
+    <postcard-tile
+      postcard="{{item}}"
+      template="{{helper.findTemplate(item.template_id, templates)}}"
+      selected="{{helper.isSelected(item.id, selectedIds)}}"
+      selectMode="{{selectMode}}"
+      bind:cardtap="onCardTap"
+      bind:cardlongpress="onCardLongPress"
+    />
+  </view>
+</view>
+
+<!-- Delete bar (select mode, logged in) -->
+<view wx:if="{{selectMode && selectedIds.length > 0}}" class="delete-bar">
+  <view class="delete-btn {{deleting ? 'disabled' : ''}}" bindtap="onDeleteSelected">
+    <text class="delete-text">{{deleting ? '删除中...' : '删除 (' + selectedIds.length + ')'}}</text>
+  </view>
+</view>
+
+<!-- Bottom-left: logout button (logged in only) -->
+<view wx:if="{{loggedIn}}" class="bottom-left-btn" bindtap="onLogout">
+  <text class="bottom-btn-text">退出</text>
+</view>
+
+<!-- FAB (logged in only) -->
+<view wx:if="{{loggedIn && !selectMode}}" class="fab" bindtap="onCreateNew">
+  <text class="fab-icon">+</text>
+</view>

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,15 +11,16 @@ class LoginResult {
 }
 
 class ApiService {
-  static String _baseUrl = 'http://127.0.0.1:8100';
+  static String _baseUrl = '';
   static String _token = '';
 
   static String get baseUrl => _baseUrl;
+  static String get token => _token;
   static bool get isAuthenticated => _token.isNotEmpty;
 
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _baseUrl = prefs.getString('postcard_server_url') ?? 'http://127.0.0.1:8100';
+    _baseUrl = prefs.getString('postcard_server_url') ?? '';
     _token = prefs.getString('postcard_token') ?? '';
   }
 
@@ -30,15 +32,61 @@ class ApiService {
     await prefs.setString('postcard_token', token);
   }
 
+  static Future<void> saveToken(String token) async {
+    _token = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('postcard_token', token);
+  }
+
+  static Future<void> logout() async {
+    _token = '';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('postcard_token', '');
+  }
+
+  static Future<Map<String, dynamic>?> getMe() async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$_baseUrl/api/auth/me'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         if (_token.isNotEmpty) 'Authorization': 'Bearer $_token',
       };
 
-  static String imageUrl(String? path) {
+  static String imageUrl(String? path, {String? size}) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
-    return '$_baseUrl$path';
+    // Route static files through the API image proxy for reliable CORS headers
+    var url = '';
+    if (path.startsWith('/static/')) {
+      url = '$_baseUrl/api/images/${path.substring(8)}';
+    } else {
+      url = '$_baseUrl$path';
+    }
+    if (size != null && (size == 'thumb' || size == 'small')) {
+      final sep = url.contains('?') ? '&' : '?';
+      url = '$url$sep size=$size';
+    }
+    return url;
+  }
+
+  static Future<Uint8List?> fetchImageBytes(String url) async {
+    try {
+      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+        return resp.bodyBytes;
+      }
+    } catch (_) {}
+    return null;
   }
 
   // ========== Auth ==========
@@ -118,6 +166,19 @@ class ApiService {
     if (resp.statusCode != 200) {
       throw Exception('Failed: ${resp.statusCode}');
     }
+  }
+
+  static Future<int> batchDeletePostcards(List<int> ids) async {
+    final resp = await http.post(
+      Uri.parse('$_baseUrl/api/postcards/batch-delete'),
+      headers: _headers,
+      body: jsonEncode({'ids': ids}),
+    );
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      return data['deleted'] ?? 0;
+    }
+    throw Exception('Failed: ${resp.statusCode}');
   }
 
   // ========== Materials ==========

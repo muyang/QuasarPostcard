@@ -3,6 +3,10 @@ import 'dart:ui';
 
 // ======== Postcard Templates ========
 
+Color _parseColor(String? hex, String fallback) {
+  return Color(int.parse((hex ?? fallback).toString(), radix: 16) | 0xFF000000);
+}
+
 class PostcardTemplate {
   final String id;
   final String name;
@@ -12,6 +16,57 @@ class PostcardTemplate {
   final String? imageUrl;
   final String status;
 
+  // Text colors
+  final Color fromColor;
+  final Color toColor;
+  final Color messageColor;
+
+  // Text fonts
+  final String fromFont;
+  final String toFont;
+  final String messageFont;
+
+  // Text sizes
+  final double fromSize;
+  final double toSize;
+  final double messageSize;
+
+  // Text positions (percentage 0-100)
+  final double fromX;
+  final double fromY;
+  final double toX;
+  final double toY;
+  final double messageX;
+  final double messageY;
+  final double messageW;
+  final double messageH;
+
+  // Stamp position & transform
+  final double stampX;
+  final double stampY;
+  final double stampRotation;
+  final double stampScale;
+
+  // Postmark position & transform
+  final double postmarkX;
+  final double postmarkY;
+  final double postmarkRotation;
+  final double postmarkScale;
+
+  // From/To box styling
+  final double fromW;
+  final double fromH;
+  final double toW;
+  final double toH;
+  final Color fromBorderColor;
+  final Color toBorderColor;
+  final double fromBorderWidth;
+  final double toBorderWidth;
+  final Color fromBgColor;
+  final Color toBgColor;
+  final double fromBgOpacity;
+  final double toBgOpacity;
+
   const PostcardTemplate({
     required this.id,
     required this.name,
@@ -20,6 +75,43 @@ class PostcardTemplate {
     this.decorationPattern,
     this.imageUrl,
     this.status = 'published_free',
+    this.fromColor = const Color(0xFF333333),
+    this.toColor = const Color(0xFF333333),
+    this.messageColor = const Color(0xFF555555),
+    this.fromFont = 'sans-serif',
+    this.toFont = 'sans-serif',
+    this.messageFont = 'sans-serif',
+    this.fromSize = 14,
+    this.toSize = 14,
+    this.messageSize = 13,
+    this.fromX = 10,
+    this.fromY = 82,
+    this.toX = 55,
+    this.toY = 82,
+    this.messageX = 10,
+    this.messageY = 60,
+    this.messageW = 80,
+    this.messageH = 80,
+    this.stampX = 78,
+    this.stampY = 5,
+    this.stampRotation = 0,
+    this.stampScale = 100,
+    this.postmarkX = 45,
+    this.postmarkY = 45,
+    this.postmarkRotation = 0,
+    this.postmarkScale = 100,
+    this.fromW = 120,
+    this.fromH = 28,
+    this.toW = 120,
+    this.toH = 28,
+    this.fromBorderColor = const Color(0xFFCCCCCC),
+    this.toBorderColor = const Color(0xFFCCCCCC),
+    this.fromBorderWidth = 0,
+    this.toBorderWidth = 0,
+    this.fromBgColor = const Color(0xFFFFFFFF),
+    this.toBgColor = const Color(0xFFFFFFFF),
+    this.fromBgOpacity = 0,
+    this.toBgOpacity = 0,
   });
 
   factory PostcardTemplate.fromJson(Map<String, dynamic> json) {
@@ -27,14 +119,59 @@ class PostcardTemplate {
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       gradientColors: [
-        Color(int.parse((json['gradient_from'] ?? 'FFF0F5').toString(), radix: 16) | 0xFF000000),
-        Color(int.parse((json['gradient_mid'] ?? json['gradient_from'] ?? 'FFE4E1').toString(), radix: 16) | 0xFF000000),
-        Color(int.parse((json['gradient_to'] ?? 'FFC0CB').toString(), radix: 16) | 0xFF000000),
+        _parseColor(json['gradient_from'], 'FFF0F5'),
+        _parseColor(json['gradient_mid'] ?? json['gradient_from'], 'FFE4E1'),
+        _parseColor(json['gradient_to'], 'FFC0CB'),
       ],
       cornerRadius: (json['corner_radius'] ?? 8).toDouble(),
       decorationPattern: json['pattern'],
       imageUrl: json['image_url'],
       status: json['status'] ?? 'published_free',
+      fromColor: _parseColor(json['from_color'], '333333'),
+      toColor: _parseColor(json['to_color'], '333333'),
+      messageColor: _parseColor(json['message_color'], '555555'),
+      fromFont: json['from_font'] ?? 'sans-serif',
+      toFont: json['to_font'] ?? 'sans-serif',
+      messageFont: json['message_font'] ?? 'sans-serif',
+      fromSize: (json['from_size'] ?? 14).toDouble(),
+      toSize: (json['to_size'] ?? 14).toDouble(),
+      messageSize: (json['message_size'] ?? 13).toDouble(),
+      fromX: (json['from_x'] ?? 10).toDouble(),
+      fromY: (json['from_y'] ?? 82).toDouble(),
+      toX: (json['to_x'] ?? 55).toDouble(),
+      toY: (json['to_y'] ?? 82).toDouble(),
+      messageX: (json['message_x'] ?? 10).toDouble(),
+      messageY: (json['message_y'] ?? 60).toDouble(),
+      messageW: (json['message_w'] ?? 80).toDouble(),
+      messageH: (json['message_h'] ?? 80).toDouble(),
+      stampX: (json['stamp_x'] ?? 78).toDouble(),
+      stampY: (json['stamp_y'] ?? 5).toDouble(),
+      stampRotation: (json['stamp_rotation'] ?? 0).toDouble(),
+      stampScale: (json['stamp_scale'] ?? 100).toDouble(),
+      postmarkX: (json['postmark_x'] ?? 45).toDouble(),
+      postmarkY: (json['postmark_y'] ?? 45).toDouble(),
+      postmarkRotation: (json['postmark_rotation'] ?? 0).toDouble(),
+      postmarkScale: (json['postmark_scale'] ?? 100).toDouble(),
+      fromW: (json['from_w'] ?? 120).toDouble(),
+      fromH: (json['from_h'] ?? 28).toDouble(),
+      toW: (json['to_w'] ?? 120).toDouble(),
+      toH: (json['to_h'] ?? 28).toDouble(),
+      fromBorderColor: _parseColor(json['from_border_color'], 'CCCCCC'),
+      toBorderColor: _parseColor(json['to_border_color'], 'CCCCCC'),
+      fromBorderWidth: (json['from_border_width'] ?? 0).toDouble(),
+      toBorderWidth: (json['to_border_width'] ?? 0).toDouble(),
+      fromBgColor: _parseColor(json['from_bg_color'], 'FFFFFF'),
+      toBgColor: _parseColor(json['to_bg_color'], 'FFFFFF'),
+      fromBgOpacity: (json['from_bg_opacity'] ?? 0).toDouble(),
+      toBgOpacity: (json['to_bg_opacity'] ?? 0).toDouble(),
+    );
+  }
+
+  factory PostcardTemplate.empty() {
+    return PostcardTemplate(
+      id: '__empty__',
+      name: '加载中...',
+      gradientColors: [const Color(0xFFF5F5F5), const Color(0xFFEEEEEE), const Color(0xFFE0E0E0)],
     );
   }
 }
@@ -45,12 +182,14 @@ const POSTCARD_TEMPLATES = [
     name: '花卉',
     gradientColors: [Color(0xFFFFF0F5), Color(0xFFFFE4E1), Color(0xFFFFC0CB)],
     decorationPattern: 'floral',
+    fromColor: Color(0xFF7B4B6A), toColor: Color(0xFF7B4B6A), messageColor: Color(0xFF9B6B8A),
   ),
   PostcardTemplate(
     id: 'geometric',
     name: '几何',
     gradientColors: [Color(0xFFF0F4FF), Color(0xFFE8ECF4), Color(0xFFB8C8E8)],
     decorationPattern: 'geometric',
+    fromColor: Color(0xFF3A5070), toColor: Color(0xFF3A5070), messageColor: Color(0xFF4A6080),
   ),
   PostcardTemplate(
     id: 'minimalist',
@@ -58,45 +197,29 @@ const POSTCARD_TEMPLATES = [
     gradientColors: [Color(0xFFFAFAFA), Color(0xFFF5F5F5), Color(0xFFEEEEEE)],
     cornerRadius: 4,
     decorationPattern: 'minimalist',
+    fromColor: Color(0xFF444444), toColor: Color(0xFF444444), messageColor: Color(0xFF666666),
   ),
   PostcardTemplate(
     id: 'vintage',
     name: '复古',
     gradientColors: [Color(0xFFFFF8F0), Color(0xFFF5E6D3), Color(0xFFE8D5B7)],
     decorationPattern: 'vintage',
+    fromColor: Color(0xFF5D4037), toColor: Color(0xFF5D4037), messageColor: Color(0xFF795548),
   ),
   PostcardTemplate(
     id: 'nature',
     name: '自然',
     gradientColors: [Color(0xFFF0FFF0), Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
     decorationPattern: 'nature',
+    fromColor: Color(0xFF2E5D3A), toColor: Color(0xFF2E5D3A), messageColor: Color(0xFF3E6D4A),
   ),
   PostcardTemplate(
     id: 'ocean',
     name: '海洋',
     gradientColors: [Color(0xFFF0F8FF), Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
     decorationPattern: 'ocean',
+    fromColor: Color(0xFF1A3A5C), toColor: Color(0xFF1A3A5C), messageColor: Color(0xFF2A4A6C),
   ),
-];
-
-// ======== Theme Colors ========
-
-class ThemeColorOption {
-  final Color color;
-  final String name;
-
-  const ThemeColorOption({required this.color, required this.name});
-}
-
-const THEME_COLORS = [
-  ThemeColorOption(color: Color(0xFFE91E63), name: '玫红'),
-  ThemeColorOption(color: Color(0xFF4CAF50), name: '翠绿'),
-  ThemeColorOption(color: Color(0xFF2196F3), name: '海蓝'),
-  ThemeColorOption(color: Color(0xFFFF9800), name: '暖橙'),
-  ThemeColorOption(color: Color(0xFF9C27B0), name: '紫罗兰'),
-  ThemeColorOption(color: Color(0xFF607D8B), name: '灰蓝'),
-  ThemeColorOption(color: Color(0xFF795548), name: '棕色'),
-  ThemeColorOption(color: Color(0xFFF44336), name: '红色'),
 ];
 
 // ======== Stamps ========
@@ -198,9 +321,9 @@ class PostcardDesign {
   int id;
   String status;
 
-  List<PostcardTemplate> _templates = POSTCARD_TEMPLATES;
-  List<PostcardStamp> _stamps = POSTCARD_STAMPS;
-  List<PostcardPostmark> _postmarks = POSTCARD_POSTMARKS;
+  List<PostcardTemplate> _templates = [];
+  List<PostcardStamp> _stamps = [];
+  List<PostcardPostmark> _postmarks = [];
 
   void updateMaterials({
     List<PostcardTemplate>? templates,
@@ -229,8 +352,10 @@ class PostcardDesign {
     this.status = 'PENDING',
   });
 
-  PostcardTemplate get template =>
-      _templates.firstWhere((t) => t.id == templateId, orElse: () => _templates[0]);
+  PostcardTemplate get template {
+    if (_templates.isEmpty) return PostcardTemplate.empty();
+    return _templates.firstWhere((t) => t.id == templateId, orElse: () => _templates[0]);
+  }
 
   PostcardStamp? get stamp =>
       stampId != null ? _stamps.cast<PostcardStamp?>().firstWhere((s) => s!.id == stampId, orElse: () => null) : null;

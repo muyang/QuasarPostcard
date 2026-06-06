@@ -2,9 +2,37 @@ services:
   postcard:
     build: .
     container_name: card-designer
-    ports:
-      - "8100:8100"
+    expose:
+      - "8100"
     volumes:
-      - ./data:/app/data          # SQLite database persistence
-      - ./backend/static/cards:/app/static/cards  # Uploaded images persistence
+      - ./data:/app/data
+      - ./backend/static/cards:/app/static/cards
+    environment:
+      - DB_PATH=sqlite:////app/data/postcard.db
+      - JWT_SECRET=${JWT_SECRET:-postcard-designer-secret-2024}
+      - WECHAT_APPID=${WECHAT_APPID:-}
+      - WECHAT_APPSECRET=${WECHAT_APPSECRET:-}
+      - WECHAT_REDIRECT_URI=${WECHAT_REDIRECT_URI:-}
+      - BASE_URL=${BASE_URL:-http://localhost:8100}
+      - WECHAT_MINI_APPID=${WECHAT_MINI_APPID:-}
+      - WECHAT_MINI_APPSECRET=${WECHAT_MINI_APPSECRET:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: card-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - postcard
     restart: unless-stopped

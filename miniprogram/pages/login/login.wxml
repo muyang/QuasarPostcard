@@ -1,0 +1,16 @@
+<view class="login-page" style="padding-top: {{statusBarHeight}}px;">
+  <!-- Loading spinner -->
+  <view wx:if="{{!ready}}" class="loading-box">
+    <view class="spinner"></view>
+  </view>
+
+  <!-- Login content: centered button + hint -->
+  <block wx:else>
+    <view class="login-center">
+      <view class="wx-login-btn {{logging ? 'disabled' : ''}}" bindtap="onLogin">
+        <text class="wx-login-text">{{logging ? '登录中...' : '微信登录'}}</text>
+      </view>
+      <text class="login-hint">微信登录后可保存和分享明信片</text>
+    </view>
+  </block>
+</view>

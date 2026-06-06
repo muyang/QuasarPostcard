@@ -35,6 +35,6 @@ docker compose up -d
 
 echo ""
 echo "=== 部署完成 ==="
-echo "访问地址: http://localhost:8100"
-echo "管理后台: http://localhost:8100/admin"
+echo "访问地址: https://card.qpvisiontech.com"
+echo "管理后台: https://postcard.hn.takin.cc/admin"
 echo "默认账号: admin / postcard2024"

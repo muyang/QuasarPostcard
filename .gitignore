@@ -1,27 +1,40 @@
-# Flutter build
-build/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-
-# IDE
-.idea/
-.vscode/
-*.iml
-*.swp
-*.swo
-
 # Python
 __pycache__/
 *.pyc
-backend/postcard.db
+*.pyo
+venv/
+.env
 
-# Generated Flutter web deploy
-backend/static/app/
+# SQLite DB
+*.db
+*.db-journal
+*.db-wal
+data/
 
-# User uploaded images
-backend/static/cards/
+# IDE
+.vscode/
+.idea/
+
+# Flutter build artifacts
+.dart_tool/
+build/
+.flutter-plugins*
+.metadata
+**/pubspec.lock
 
 # OS
 .DS_Store
 Thumbs.db
+
+# SSL certs (never commit private keys)
+cert/
+
+# User-uploaded content
+backend/static/cards/
+
+# WeChat Mini Program CI
+miniprogram/private.key
+preview-qrcode.png
+
+# Node
+node_modules/

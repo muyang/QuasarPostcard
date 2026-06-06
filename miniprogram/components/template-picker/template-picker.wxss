@@ -1,0 +1,102 @@
+.picker {
+  padding: 0 16rpx;
+}
+
+.title {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  margin-bottom: 12rpx;
+}
+
+.group-tabs {
+  white-space: nowrap;
+  margin-bottom: 16rpx;
+  padding: 0 4rpx;
+}
+
+.group-tab {
+  display: inline-block;
+  padding: 8rpx 20rpx;
+  margin-right: 10rpx;
+  border-radius: 20rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+}
+
+.group-tab-active {
+  background: #7C4DFF;
+  border-color: #7C4DFF;
+}
+
+.group-tab-text {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.group-tab-active .group-tab-text {
+  color: #fff;
+  font-weight: 600;
+}
+
+.loading {
+  height: 120rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid rgba(124, 77, 255, 0.3);
+  border-top-color: #7C4DFF;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  justify-content: center;
+}
+
+.card {
+  width: calc(25% - 9rpx);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8rpx 0;
+  background: transparent;
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.card.selected {
+  border-color: #7C4DFF;
+  border-width: 4rpx;
+  box-shadow: 0 0 16rpx rgba(124, 77, 255, 0.25);
+}
+
+.card-img {
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 12rpx;
+}
+
+.card-name {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.54);
+  font-weight: 500;
+  margin-top: 4rpx;
+}
+
+.card.selected .card-name {
+  color: #fff;
+}

@@ -1,0 +1,36 @@
+<view class="picker">
+  <view class="title">选择模版</view>
+  <view wx:if="{{loading && templates.length === 0}}" class="loading">
+    <view class="spinner"></view>
+  </view>
+  <view wx:else>
+    <scroll-view class="group-tabs" scroll-x>
+      <view
+        wx:for="{{groups}}"
+        wx:key="*this"
+        class="group-tab {{activeGroup === item ? 'group-tab-active' : ''}}"
+        data-group="{{item}}"
+        bindtap="onGroupTap"
+      >
+        <text class="group-tab-text">{{item}}</text>
+      </view>
+    </scroll-view>
+    <view class="grid">
+      <view
+        wx:for="{{filteredTemplates}}"
+        wx:key="id"
+        class="card {{selected === item.id ? 'selected' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onSelect"
+      >
+        <image
+          wx:if="{{item.local_img}}"
+          class="card-img"
+          src="{{item.local_img}}"
+          mode="aspectFit"
+        />
+        <text class="card-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+</view>

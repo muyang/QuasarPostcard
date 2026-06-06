@@ -65,8 +65,33 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  bool _checking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _validateToken();
+  }
+
+  Future<void> _validateToken() async {
+    if (ApiService.isAuthenticated) {
+      final me = await ApiService.getMe();
+      if (me == null || me['authenticated'] != true) {
+        await ApiService.logout();
+      }
+    }
+    if (mounted) {
+      setState(() => _checking = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_checking) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF7C4DFF))),
+      );
+    }
     if (ApiService.isAuthenticated) {
       return const PostcardListScreen();
     }

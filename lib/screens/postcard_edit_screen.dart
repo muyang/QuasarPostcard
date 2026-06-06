@@ -18,6 +18,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
   late PostcardDesign _design;
   EditorStep _step = EditorStep.template;
   bool _saving = false;
+  bool _materialsLoading = true;
   bool _stampAnimating = false;
   bool _sending = false;
   bool _downloading = false;
@@ -32,18 +33,27 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
 
   Future<void> _loadMaterials() async {
     try {
-      final templates = await ApiService.getTemplates();
-      final stamps = await ApiService.getStamps();
-      final postmarks = await ApiService.getPostmarks();
+      final results = await Future.wait([
+        ApiService.getTemplates(),
+        ApiService.getStamps(),
+        ApiService.getPostmarks(),
+      ]);
       if (!mounted) return;
+      final templates = results[0] as List<Map<String, dynamic>>;
+      final stamps = results[1] as List<Map<String, dynamic>>;
+      final postmarks = results[2] as List<Map<String, dynamic>>;
       setState(() {
         _design.updateMaterials(
           templates: templates.map((j) => PostcardTemplate.fromJson(j)).toList(),
           stamps: stamps.map((j) => PostcardStamp.fromJson(j)).toList(),
           postmarks: postmarks.map((j) => PostcardPostmark.fromJson(j)).toList(),
         );
+        _materialsLoading = false;
       });
-    } catch (_) {}
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _materialsLoading = false);
+    }
   }
 
   Future<void> _save() async {
@@ -84,6 +94,12 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
         if (mounted) setState(() => _stampAnimating = true);
       });
     }
+  }
+
+  Future<void> _sharePostcard() async {
+    final bytes = await ShareSheet.capture(_repaintKey);
+    if (bytes == null || !mounted) return;
+    ShareSheet.show(context, bytes, 'postcard_${DateTime.now().millisecondsSinceEpoch}.png');
   }
 
   Future<void> _download() async {
@@ -153,6 +169,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
         backgroundColor: const Color(0xFF0D0D1A),
         title: const Text('明信片设计器', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
         actions: [
+          IconButton(icon: _downloading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)) : const Icon(Icons.share_rounded, color: Colors.white70), tooltip: '分享', onPressed: _downloading ? null : _sharePostcard),
           IconButton(icon: _downloading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)) : const Icon(Icons.download_rounded, color: Colors.white70), tooltip: '下载', onPressed: _downloading ? null : _download),
           TextButton(
             onPressed: _saving ? null : _save,
@@ -172,6 +189,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
             onStepChanged: _onStepChanged,
             onDesignChanged: (d) => setState(() => _design = d),
             onSend: _onSend,
+            materialsLoading: _materialsLoading,
           );
           if (isWide) {
             return Row(children: [

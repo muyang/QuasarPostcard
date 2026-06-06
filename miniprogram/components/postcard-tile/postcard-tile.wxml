@@ -1,0 +1,51 @@
+<wxs module="helper">
+function getGradient(tpl) {
+  var from = tpl.gradient_from || 'FFF0F5';
+  var to = tpl.gradient_to || 'FFC0CB';
+  function hex2rgb(h) {
+    h = (h || '').replace('#', '').replace('0x', '');
+    if (h.length === 8) h = h.slice(2);
+    if (h.length !== 6) h = 'FFF0F5';
+    var r = parseInt(h.slice(0,2), 16);
+    var g = parseInt(h.slice(2,4), 16);
+    var b = parseInt(h.slice(4,6), 16);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+  return 'linear-gradient(135deg, ' + hex2rgb(from) + ', ' + hex2rgb(to) + ')';
+}
+module.exports = { getGradient: getGradient };
+</wxs>
+
+<view
+  class="tile {{selected ? 'selected' : ''}}"
+  style="background: {{helper.getGradient(template)}};"
+  bindtap="onTap"
+  bindlongpress="onLongPress"
+>
+  <!-- Select checkbox overlay -->
+  <view wx:if="{{selectMode}}" class="check-overlay">
+    <view class="checkbox {{selected ? 'checked' : ''}}">
+      <text wx:if="{{selected}}" class="check-mark">✓</text>
+    </view>
+  </view>
+
+  <!-- Background image preview -->
+  <image
+    wx:if="{{localImg}}"
+    class="bg-img"
+    src="{{localImg}}"
+    mode="aspectFill"
+  />
+
+  <!-- Content overlay -->
+  <view class="content">
+    <view class="top-row">
+      <text class="tpl-name">{{template.name || '明信片'}}</text>
+    </view>
+    <view class="bottom-row">
+      <text wx:if="{{postcard.to_name}}" class="field">To: {{postcard.to_name}}</text>
+      <text wx:if="{{postcard.from_name}}" class="field">From: {{postcard.from_name}}</text>
+      <text wx:if="{{!postcard.to_name && !postcard.from_name}}" class="field placeholder">空白明信片</text>
+    </view>
+  </view>
+</view>
