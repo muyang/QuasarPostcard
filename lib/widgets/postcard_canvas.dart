@@ -69,7 +69,7 @@ class PostcardCanvas extends StatelessWidget {
                         Positioned.fill(
                           child: AppImage(
                             url: template.imageUrl,
-                            fit: BoxFit.cover,
+                            fit: _fitMode(template.imageFit),
                           ),
                         ),
 
@@ -102,6 +102,16 @@ class PostcardCanvas extends StatelessWidget {
   }
 
   // ======== Element builders ========
+
+  BoxFit _fitMode(String mode) {
+    switch (mode) {
+      case 'contain': return BoxFit.contain;
+      case 'fill': return BoxFit.fill;
+      case 'fitWidth': return BoxFit.fitWidth;
+      case 'fitHeight': return BoxFit.fitHeight;
+      default: return BoxFit.cover;
+    }
+  }
 
   Widget _stampElement(PostcardTemplate template, PostcardStamp? stamp) {
     final stScl = template.stampScale / 100;

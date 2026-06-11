@@ -109,6 +109,7 @@ def miniprogram_config():
     return {
         "appid": WECHAT_MINI_APPID,
         "configured": is_mini_configured(),
+        "devMode": not is_mini_configured(),
     }
 
 
@@ -117,8 +118,38 @@ def miniprogram_login(data: MiniProgramLoginRequest, db: Session = Depends(get_d
     code = data.code
     if not code:
         raise HTTPException(400, "缺少授权码")
+
+    # Dev mode: bypass WeChat API when credentials are not configured
     if not is_mini_configured():
-        raise HTTPException(400, "小程序登录未配置")
+        mock_openid = f"dev_{code[:16]}" if len(code) > 16 else f"dev_{code}"
+        user = db.query(AppUser).filter(AppUser.openid == mock_openid).first()
+        if not user:
+            user = AppUser(
+                openid=mock_openid,
+                nickname=data.nickname or "开发者",
+                avatar_url=data.avatar_url or "",
+            )
+            db.add(user)
+        else:
+            if data.nickname:
+                user.nickname = data.nickname
+            if data.avatar_url:
+                user.avatar_url = data.avatar_url
+            user.last_login_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(user)
+
+        expire = datetime.now(timezone.utc) + timedelta(days=TOKEN_EXPIRE_DAYS)
+        token = jwt.encode(
+            {"sub": mock_openid, "type": "wechat", "user_id": user.id, "exp": expire},
+            SECRET_KEY, algorithm=ALGORITHM,
+        )
+        return {
+            "success": True,
+            "token": token,
+            "nickname": user.nickname,
+            "avatar_url": user.avatar_url,
+        }
 
     token_data = jscode2session(WECHAT_MINI_APPID, WECHAT_MINI_APPSECRET, code)
     if "errcode" in token_data and token_data.get("errcode") != 0:

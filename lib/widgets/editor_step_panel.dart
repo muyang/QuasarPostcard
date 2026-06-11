@@ -108,7 +108,7 @@ class EditorStepPanel extends StatelessWidget {
 
 // ======== Step 1: Template + Theme ========
 
-class _TemplateStep extends StatelessWidget {
+class _TemplateStep extends StatefulWidget {
   final PostcardDesign design;
   final void Function(void Function(PostcardDesign d)) onUpdate;
   final ValueChanged<EditorStep> onNavigate;
@@ -117,14 +117,114 @@ class _TemplateStep extends StatelessWidget {
   const _TemplateStep({required this.design, required this.onUpdate, required this.onNavigate, this.loading = false});
 
   @override
+  State<_TemplateStep> createState() => _TemplateStepState();
+}
+
+class _TemplateStepState extends State<_TemplateStep> {
+  String _activeGroup = '全部';
+
+  @override
+  void didUpdateWidget(covariant _TemplateStep oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncGroup();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _syncGroup();
+  }
+
+  void _syncGroup() {
+    final templates = widget.design.templates;
+    if (templates.isEmpty) return;
+    // Build unique group list
+    final groups = <String>{};
+    for (final t in templates) {
+      groups.add(t.templateGroup);
+    }
+    // Auto-select group of the currently selected template
+    final selectedId = widget.design.templateId;
+    if (selectedId.isNotEmpty) {
+      for (final t in templates) {
+        if (t.id == selectedId) {
+          final g = t.templateGroup;
+          if (_activeGroup != '全部' && _activeGroup != g) {
+            _activeGroup = g;
+          }
+          break;
+        }
+      }
+    }
+    // If active group no longer exists, reset
+    if (_activeGroup != '全部' && !groups.contains(_activeGroup)) {
+      _activeGroup = groups.isNotEmpty ? groups.first : '全部';
+    }
+  }
+
+  List<PostcardTemplate> get _filteredTemplates {
+    final templates = widget.design.templates;
+    if (_activeGroup == '全部') return templates;
+    return templates.where((t) => t.templateGroup == _activeGroup).toList();
+  }
+
+  List<String> get _groups {
+    final groups = <String>{};
+    for (final t in widget.design.templates) {
+      groups.add(t.templateGroup);
+    }
+    return ['全部', ...groups.toList()];
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final groups = _groups;
+    final filtered = _filteredTemplates;
+    final showGroups = groups.length > 2; // "全部" + at least 2 groups
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const SizedBox(height: 8),
         const Text('选择模版', style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500)),
         const SizedBox(height: 10),
-        if (loading && design.templates.isEmpty)
+        // Group tabs
+        if (showGroups)
+          SizedBox(
+            height: 32,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: groups.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final g = groups[i];
+                final active = _activeGroup == g;
+                return GestureDetector(
+                  onTap: () => setState(() => _activeGroup = g),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: active ? const Color(0xFF7C4DFF) : Colors.transparent,
+                      border: Border.all(color: active ? const Color(0xFF7C4DFF) : Colors.white24),
+                    ),
+                    child: Text(
+                      g,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: active ? Colors.white : Colors.white60,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        if (showGroups) const SizedBox(height: 10),
+        // Template list
+        if (widget.loading && widget.design.templates.isEmpty)
           const SizedBox(
             height: 56,
             child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))),
@@ -134,13 +234,13 @@ class _TemplateStep extends StatelessWidget {
             height: 56,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: design.templates.length,
+              itemCount: filtered.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
-                final t = design.templates[i];
-                final sel = design.templateId == t.id;
+                final t = filtered[i];
+                final sel = widget.design.templateId == t.id;
                 return GestureDetector(
-                  onTap: () => onUpdate((d) { d.templateId = t.id; }),
+                  onTap: () => widget.onUpdate((d) { d.templateId = t.id; }),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     width: 76,
@@ -167,7 +267,7 @@ class _TemplateStep extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 20),
-        Align(alignment: Alignment.centerRight, child: _nextBtn(() => onNavigate(EditorStep.text))),
+        Align(alignment: Alignment.centerRight, child: _nextBtn(() => widget.onNavigate(EditorStep.text))),
         const SizedBox(height: 16),
       ]),
     );

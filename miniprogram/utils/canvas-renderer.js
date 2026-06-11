@@ -160,6 +160,7 @@ function drawGradient(ctx, tpl, w, h) {
 function drawBackgroundImage(ctx, canvas, tpl, w, h, imgSize) {
   if (!tpl.imageUrl) return Promise.resolve();
   var url = api.imageUrl(tpl.imageUrl, imgSize !== undefined ? imgSize : 'small');
+  var fitMode = tpl.imageFit || 'cover';
   return imageCache.loadImage(url).then(function(localPath) {
     if (!localPath) return;
     var img = canvas.createImage();
@@ -171,14 +172,44 @@ function drawBackgroundImage(ctx, canvas, tpl, w, h, imgSize) {
         var imgRatio = img.width / img.height;
         var canvasRatio = w / h;
         var sx = 0, sy = 0, sw = img.width, sh = img.height;
-        if (imgRatio > canvasRatio) {
-          sw = img.height * canvasRatio;
-          sx = (img.width - sw) / 2;
+        var dx = 0, dy = 0, dw = w, dh = h;
+
+        if (fitMode === 'fill') {
+          // Stretch to fill entire canvas (may distort)
+          ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, w, h);
+        } else if (fitMode === 'contain') {
+          // Scale to fit entirely within canvas (letterbox)
+          if (imgRatio > canvasRatio) {
+            dw = w;
+            dh = w / imgRatio;
+            dy = (h - dh) / 2;
+          } else {
+            dh = h;
+            dw = h * imgRatio;
+            dx = (w - dw) / 2;
+          }
+          ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
+        } else if (fitMode === 'fitWidth') {
+          // Scale to match canvas width, height proportional
+          dh = w / imgRatio;
+          dy = (h - dh) / 2;
+          ctx.drawImage(img, 0, 0, img.width, img.height, 0, dy, w, dh);
+        } else if (fitMode === 'fitHeight') {
+          // Scale to match canvas height, width proportional
+          dw = h * imgRatio;
+          dx = (w - dw) / 2;
+          ctx.drawImage(img, 0, 0, img.width, img.height, dx, 0, dw, h);
         } else {
-          sh = img.width / canvasRatio;
-          sy = (img.height - sh) / 2;
+          // Default: cover (center-crop to fill)
+          if (imgRatio > canvasRatio) {
+            sw = img.height * canvasRatio;
+            sx = (img.width - sw) / 2;
+          } else {
+            sh = img.width / canvasRatio;
+            sy = (img.height - sh) / 2;
+          }
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
         }
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
         ctx.restore();
         resolve();
       };

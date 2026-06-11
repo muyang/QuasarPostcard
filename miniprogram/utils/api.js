@@ -1,4 +1,5 @@
-var BASE_URL = 'https://card.qpvisiontech.com';
+//var BASE_URL = 'https://card.qpvisiontech.com';
+var BASE_URL = 'http://localhost:8100';
 var TOKEN = '';
 
 function setToken(token) {

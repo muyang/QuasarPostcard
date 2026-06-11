@@ -14,7 +14,7 @@ def _template_dict(r):
     return {
         "id": r.id, "name": r.name, "template_group": getattr(r, 'template_group', '默认') or '默认',
         "gradient_from": r.gradient_from, "gradient_to": r.gradient_to, "gradient_mid": r.gradient_mid,
-        "corner_radius": r.corner_radius, "pattern": r.pattern, "image_url": r.image_url, "status": r.status,
+        "corner_radius": r.corner_radius, "pattern": r.pattern, "image_url": r.image_url, "image_fit": getattr(r, 'image_fit', 'cover') or 'cover', "status": r.status,
         "from_font": r.from_font, "to_font": r.to_font, "message_font": r.message_font,
         "from_color": r.from_color, "to_color": r.to_color, "message_color": r.message_color,
         "from_size": r.from_size, "to_size": r.to_size, "message_size": r.message_size,
@@ -40,7 +40,7 @@ def _postmark_dict(r):
 
 TEMPLATE_FIELDS = [
     "name", "template_group", "gradient_from", "gradient_to", "gradient_mid", "corner_radius", "pattern",
-    "image_url", "status",
+    "image_url", "image_fit", "status",
     "from_font", "to_font", "message_font", "from_color", "to_color", "message_color",
     "from_size", "to_size", "message_size", "from_x", "from_y", "to_x", "to_y",
     "message_x", "message_y", "message_w", "message_h",
@@ -93,6 +93,7 @@ def create_template(data: dict, db: Session = Depends(get_db), _: str = Depends(
         corner_radius=data.get("corner_radius", 8),
         pattern=data.get("pattern"),
         image_url=data.get("image_url"),
+        image_fit=data.get("image_fit", "cover"),
         status=data.get("status", "published_free"),
     )
     for f in TEMPLATE_FIELDS:
@@ -292,11 +293,36 @@ def seed_defaults(db: Session = Depends(get_db), _: str = Depends(verify_admin))
             {"id": "vintage_sepia", "label": "复古棕", "date_text": "2026.05.13", "color": "795548", "status": "published_free"},
         ],
     }
+    added_t = added_s = added_p = 0
+    skip_t = skip_s = skip_p = 0
     for t in defaults["templates"]:
-        db.merge(PostcardTemplate(**t))
+        existing = db.query(PostcardTemplate).filter(PostcardTemplate.id == t["id"]).first()
+        if not existing:
+            db.add(PostcardTemplate(**t))
+            added_t += 1
+        else:
+            skip_t += 1
     for s in defaults["stamps"]:
-        db.merge(PostcardStamp(**s))
+        existing = db.query(PostcardStamp).filter(PostcardStamp.id == s["id"]).first()
+        if not existing:
+            db.add(PostcardStamp(**s))
+            added_s += 1
+        else:
+            skip_s += 1
     for p in defaults["postmarks"]:
-        db.merge(PostcardPostmark(**p))
+        existing = db.query(PostcardPostmark).filter(PostcardPostmark.id == p["id"]).first()
+        if not existing:
+            db.add(PostcardPostmark(**p))
+            added_p += 1
+        else:
+            skip_p += 1
     db.commit()
-    return JSONResponse(content={"success": True, "message": f"已初始化 {len(defaults['templates'])} 模版, {len(defaults['stamps'])} 邮票, {len(defaults['postmarks'])} 邮戳"}, headers=NO_CACHE)
+    parts = []
+    if added_t: parts.append(f"{added_t} 模版")
+    if added_s: parts.append(f"{added_s} 邮票")
+    if added_p: parts.append(f"{added_p} 邮戳")
+    skipped = skip_t + skip_s + skip_p
+    msg = f"已新增 {', '.join(parts)}" if parts else "无新增"
+    if skipped:
+        msg += f"，跳过 {skipped} 条已存在记录"
+    return JSONResponse(content={"success": True, "message": msg}, headers=NO_CACHE)

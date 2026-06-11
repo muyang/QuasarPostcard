@@ -340,10 +340,18 @@ function filterByGroup(group) {
 async function createGroup() {
   const name = prompt('请输入新分组名称:');
   if (!name || !name.trim()) return;
-  currentGroup = name.trim();
+  const groupName = name.trim();
+  // Create a draft template in this group so it persists immediately
+  const newId = 'group_' + Date.now().toString(36);
+  try {
+    await api('/api/materials/templates', 'POST', {
+      id: newId, name: '未命名模板', template_group: groupName, status: 'draft'
+    });
+  } catch(e) { console.error('Failed to create group template:', e); }
+  currentGroup = groupName;
   currentPage = 1;
+  await refreshGroupTabs();
   load(1);
-  refreshGroupTabs();
 }
 
 async function load(page){
@@ -473,13 +481,13 @@ function getDefaultTemplate() {
   return {
     id: generateAutoId(), name: '', template_group: '默认',
     gradient_from: 'FFF0F5', gradient_to: 'FFC0CB', gradient_mid: 'FFE4E1',
-    corner_radius: 8, pattern: '', image_url: null, status: 'published_free',
+    corner_radius: 8, pattern: '', image_url: null, image_fit: 'cover', status: 'published_free',
     from_font:'sans-serif',to_font:'sans-serif',message_font:'sans-serif',
     from_color:'333333',to_color:'333333',message_color:'555555',
     from_size:14,to_size:14,message_size:13,
-    from_x:10,from_y:82,to_x:55,to_y:82,message_x:10,message_y:60,message_w:80,message_h:80,
-    stamp_x:78,stamp_y:5,stamp_rotation:0,stamp_scale:100,
-    postmark_x:45,postmark_y:45,postmark_rotation:0,postmark_scale:100,
+    from_x:18,from_y:88,to_x:60,to_y:88,message_x:8,message_y:40,message_w:82,message_h:70,
+    stamp_x:85,stamp_y:14,stamp_rotation:0,stamp_scale:100,
+    postmark_x:50,postmark_y:50,postmark_rotation:0,postmark_scale:100,
     from_w:120,from_h:28,to_w:120,to_h:28,
     from_border_color:'CCCCCC',to_border_color:'CCCCCC',
     from_border_width:0,to_border_width:0,
@@ -674,7 +682,7 @@ function renderForm(){
         <div class="form-group"><label>Y%</label><input id="f_stamp_y" type="number" value="${item.stamp_y||5}" min="0" max="100"></div>
         <div class="form-group xs"><label>旋转°</label><input id="f_stamp_rotation" type="number" value="${item.stamp_rotation||0}" min="-180" max="180"></div>
       </div>
-      <div class="form-group"><label>缩放</label><div class="range-row"><input type="range" id="f_stamp_scale" min="50" max="200" value="${item.stamp_scale||100}" oninput="document.getElementById('f_stamp_scale_val').textContent=this.value+'%'"><span class="range-val" id="f_stamp_scale_val">${item.stamp_scale||100}%</span></div></div>
+      <div class="form-group"><label>缩放</label><div class="range-row"><input type="range" id="f_stamp_scale" min="50" max="500" value="${item.stamp_scale||100}" oninput="document.getElementById('f_stamp_scale_val').textContent=this.value+'%'"><span class="range-val" id="f_stamp_scale_val">${item.stamp_scale||100}%</span></div></div>
       </div>
     </div>`;
 
@@ -688,7 +696,7 @@ function renderForm(){
         <div class="form-group"><label>Y%</label><input id="f_postmark_y" type="number" value="${item.postmark_y||45}" min="0" max="100"></div>
         <div class="form-group xs"><label>旋转°</label><input id="f_postmark_rotation" type="number" value="${item.postmark_rotation||0}" min="-180" max="180"></div>
       </div>
-      <div class="form-group"><label>缩放</label><div class="range-row"><input type="range" id="f_postmark_scale" min="50" max="200" value="${item.postmark_scale||100}" oninput="document.getElementById('f_pmk_scale_val').textContent=this.value+'%'"><span class="range-val" id="f_pmk_scale_val">${item.postmark_scale||100}%</span></div></div>
+      <div class="form-group"><label>缩放</label><div class="range-row"><input type="range" id="f_postmark_scale" min="50" max="500" value="${item.postmark_scale||100}" oninput="document.getElementById('f_pmk_scale_val').textContent=this.value+'%'"><span class="range-val" id="f_pmk_scale_val">${item.postmark_scale||100}%</span></div></div>
       </div>
     </div>`;
 
@@ -769,6 +777,16 @@ function renderForm(){
       <input id="f_image_url" value="${imgUrl}" placeholder="或输入图片URL" style="flex:1">
       <button class="btn btn-outline btn-small" onclick="applyUrl()">应用</button>
     </div>
+    <div style="margin-top:8px">
+      <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">图片布局</label>
+      <select id="f_image_fit" style="width:100%">
+        <option value="cover" ${(item.image_fit||'cover')==='cover'?'selected':''}>平铺填满</option>
+        <option value="contain" ${item.image_fit==='contain'?'selected':''}>居中完整</option>
+        <option value="fill" ${item.image_fit==='fill'?'selected':''}>拉伸填满</option>
+        <option value="fitWidth" ${item.image_fit==='fitWidth'?'selected':''}>适配宽度</option>
+        <option value="fitHeight" ${item.image_fit==='fitHeight'?'selected':''}>适配高度</option>
+      </select>
+    </div>
   </div>`;
 
   // --- Actions ---
@@ -839,20 +857,20 @@ function getFormData(){
     data.from_size=parseInt(document.getElementById('f_from_size')?.value)||14;
     data.to_size=parseInt(document.getElementById('f_to_size')?.value)||14;
     data.message_size=parseInt(document.getElementById('f_message_size')?.value)||13;
-    data.from_x=parseInt(document.getElementById('f_from_x')?.value)||10;
-    data.from_y=parseInt(document.getElementById('f_from_y')?.value)||82;
-    data.to_x=parseInt(document.getElementById('f_to_x')?.value)||55;
-    data.to_y=parseInt(document.getElementById('f_to_y')?.value)||82;
-    data.message_x=parseInt(document.getElementById('f_message_x')?.value)||10;
-    data.message_y=parseInt(document.getElementById('f_message_y')?.value)||60;
-    data.message_w=parseInt(document.getElementById('f_message_w')?.value)||80;
-    data.message_h=parseInt(document.getElementById('f_message_h')?.value)||80;
-    data.stamp_x=parseInt(document.getElementById('f_stamp_x')?.value)||78;
-    data.stamp_y=parseInt(document.getElementById('f_stamp_y')?.value)||5;
+    data.from_x=parseInt(document.getElementById('f_from_x')?.value)||18;
+    data.from_y=parseInt(document.getElementById('f_from_y')?.value)||88;
+    data.to_x=parseInt(document.getElementById('f_to_x')?.value)||60;
+    data.to_y=parseInt(document.getElementById('f_to_y')?.value)||88;
+    data.message_x=parseInt(document.getElementById('f_message_x')?.value)||8;
+    data.message_y=parseInt(document.getElementById('f_message_y')?.value)||40;
+    data.message_w=parseInt(document.getElementById('f_message_w')?.value)||82;
+    data.message_h=parseInt(document.getElementById('f_message_h')?.value)||70;
+    data.stamp_x=parseInt(document.getElementById('f_stamp_x')?.value)||85;
+    data.stamp_y=parseInt(document.getElementById('f_stamp_y')?.value)||14;
     data.stamp_rotation=parseInt(document.getElementById('f_stamp_rotation')?.value)||0;
     data.stamp_scale=parseInt(document.getElementById('f_stamp_scale')?.value)||100;
-    data.postmark_x=parseInt(document.getElementById('f_postmark_x')?.value)||45;
-    data.postmark_y=parseInt(document.getElementById('f_postmark_y')?.value)||45;
+    data.postmark_x=parseInt(document.getElementById('f_postmark_x')?.value)||50;
+    data.postmark_y=parseInt(document.getElementById('f_postmark_y')?.value)||50;
     data.postmark_rotation=parseInt(document.getElementById('f_postmark_rotation')?.value)||0;
     data.postmark_scale=parseInt(document.getElementById('f_postmark_scale')?.value)||100;
     data.from_w=parseInt(document.getElementById('f_from_w')?.value)||120;
@@ -880,6 +898,7 @@ function getFormData(){
   }
   data.status=document.getElementById('f_status')?.value||'published_free';
   data.image_url=document.getElementById('f_image_url')?.value||null;
+  data.image_fit=document.getElementById('f_image_fit')?.value||'cover';
   return data;
 }
 
@@ -890,7 +909,9 @@ function renderCanvas(){
 
   if(currentTab==='templates'){
     const grad=`linear-gradient(135deg,#${data.gradient_from||'FFF0F5'},#${data.gradient_mid||data.gradient_from||'FFF0F5'},#${data.gradient_to||'FFC0CB'})`;
-    const bgImg=data.image_url?`background-image:url(${data.image_url});background-size:cover;background-blend-mode:overlay;`:'';
+    const fitMap={cover:'cover',contain:'contain',fill:'100% 100%',fitWidth:'100% auto',fitHeight:'auto 100%'};
+    const bgSize=fitMap[data.image_fit]||'cover';
+    const bgImg=data.image_url?`background-image:url(${data.image_url});background-size:${bgSize};background-position:center;background-repeat:no-repeat;background-blend-mode:overlay;`:'';
     const patternEmoji = data.pattern==='floral'?'🌸':data.pattern==='geometric'?'🔷':data.pattern==='vintage'?'📮':data.pattern==='nature'?'🌿':data.pattern==='ocean'?'🌊':data.pattern==='minimalist'?'✨':'';
 
     canvas.innerHTML = ''; // clear any leftover from other tabs
@@ -1186,7 +1207,7 @@ function onDrag(e) {
       const deltaY = (e.clientY - dragState.startMouseY) / canvasZoom;
       const delta = Math.max(deltaX, deltaY) * 0.5;
       let newScale = Math.round(dragState.startVal + delta);
-      newScale = Math.max(50, Math.min(200, newScale));
+      newScale = Math.max(50, Math.min(500, newScale));
       const el = document.getElementById(scaleKey);
       if (el) { el.value = newScale;
         const valEl = document.getElementById(scaleKey === 'f_stamp_scale' ? 'f_stamp_scale_val' : 'f_pmk_scale_val');

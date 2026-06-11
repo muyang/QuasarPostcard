@@ -65,6 +65,7 @@ with engine.connect() as conn:
         ("to_bg_color", "VARCHAR(16) DEFAULT 'FFFFFF'"),
         ("from_bg_opacity", "INTEGER DEFAULT 0"),
         ("to_bg_opacity", "INTEGER DEFAULT 0"),
+        ("image_fit", "VARCHAR(16) DEFAULT 'cover'"),
     ]
     # AppUser table and postcard user_id
     try:
