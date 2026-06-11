@@ -31,6 +31,7 @@ Page({
     templates: [],
     stamps: [],
     postmarks: [],
+    groupOrder: [],
     loading: true,
     saving: false,
     sending: false,
@@ -142,16 +143,32 @@ Page({
       app.globalData.postmarks && app.globalData.postmarks.length > 0
         ? Promise.resolve(app.globalData.postmarks)
         : api.getPostmarks().then(function(items) { var r = resolveUrls(items); app.globalData.postmarks = r; return r; }),
+      api.getConfig(),
     ]).then(function(results) {
       var templates = results[0];
       var stamps = results[1];
       var postmarks = results[2];
+      var config = results[3] || {};
+      var groupOrder = config.group_order || [];
       var design = self.data.design;
+      var isNew = !design.id || design.id === 0;
+      if (isNew && config.default_template) {
+        var hasTpl = templates.some(function(t) { return t.id === config.default_template; });
+        if (hasTpl) design.template_id = config.default_template;
+      }
       if (!design.template_id && templates.length > 0) {
         design.template_id = templates[0].id;
       }
+      if (isNew && config.default_stamp) {
+        var hasStamp = stamps.some(function(s) { return s.id === config.default_stamp; });
+        if (hasStamp) design.stamp_id = config.default_stamp;
+      }
       if (!design.stamp_id && stamps.length > 0) {
         design.stamp_id = stamps[0].id;
+      }
+      if (isNew && config.default_postmark) {
+        var hasPmk = postmarks.some(function(p) { return p.id === config.default_postmark; });
+        if (hasPmk) design.postmark_id = config.default_postmark;
       }
       if (!design.postmark_id && postmarks.length > 0) {
         design.postmark_id = postmarks[0].id;
@@ -160,6 +177,7 @@ Page({
         templates: templates,
         stamps: stamps,
         postmarks: postmarks,
+        groupOrder: groupOrder,
         design: design,
         loading: false,
       });
@@ -309,8 +327,8 @@ Page({
 
     return new Promise(function(resolve, reject) {
       wx.showModal({
-        title: '微信登录',
-        content: '保存和发送明信片需要微信登录认证',
+        title: '登录',
+        content: '保存和发送明信片需要登录认证',
         confirmText: '去登录',
         cancelText: '稍后',
         success: function(res) {

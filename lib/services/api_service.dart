@@ -227,6 +227,17 @@ class ApiService {
 
   // ========== Image Upload ==========
 
+  static Future<Map<String, dynamic>?> getConfig() async {
+    try {
+      final uri = Uri.parse('$_baseUrl/api/materials/config');
+      final resp = await http.get(uri, headers: _headers);
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static Future<String> uploadImage(String filePath) async {
     final uri = Uri.parse('$_baseUrl/api/upload/image');
     final request = http.MultipartRequest('POST', uri);

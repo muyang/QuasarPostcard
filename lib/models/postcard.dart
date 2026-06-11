@@ -330,20 +330,24 @@ class PostcardDesign {
   List<PostcardTemplate> _templates = [];
   List<PostcardStamp> _stamps = [];
   List<PostcardPostmark> _postmarks = [];
+  List<String> _groupOrder = [];
 
   void updateMaterials({
     List<PostcardTemplate>? templates,
     List<PostcardStamp>? stamps,
     List<PostcardPostmark>? postmarks,
+    List<String>? groupOrder,
   }) {
     if (templates != null) _templates = templates;
     if (stamps != null) _stamps = stamps;
     if (postmarks != null) _postmarks = postmarks;
+    if (groupOrder != null) _groupOrder = groupOrder;
   }
 
   List<PostcardTemplate> get templates => _templates;
   List<PostcardStamp> get stamps => _stamps;
   List<PostcardPostmark> get postmarks => _postmarks;
+  List<String> get groupOrder => _groupOrder;
 
   PostcardDesign({
     this.templateId = 'floral',

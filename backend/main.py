@@ -91,6 +91,12 @@ with engine.connect() as conn:
         conn.commit()
     except Exception:
         pass
+    # Config table
+    try:
+        conn.execute(sa_text("CREATE TABLE IF NOT EXISTS config (key VARCHAR(64) PRIMARY KEY, value TEXT DEFAULT '')"))
+        conn.commit()
+    except Exception:
+        pass
 
 # Find Flutter app directory (handle both static/app/ and static/app/web/ layouts)
 def _find_app_dir():

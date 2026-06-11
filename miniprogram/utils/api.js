@@ -1,5 +1,5 @@
-//var BASE_URL = 'https://card.qpvisiontech.com';
-var BASE_URL = 'http://localhost:8100';
+var BASE_URL = 'https://card.qpvisiontech.com';
+//var BASE_URL = 'http://localhost:8100';
 var TOKEN = '';
 
 function setToken(token) {
@@ -101,6 +101,10 @@ function getPostmarks() {
     .then(function(res) { return res.items || res; });
 }
 
+function getConfig() {
+  return request('GET', '/api/materials/config', {}).catch(function() { return {}; });
+}
+
 // Image URL helper
 function imageUrl(path, size) {
   if (!path) return '';
@@ -125,5 +129,6 @@ module.exports = {
   getTemplates: getTemplates,
   getStamps: getStamps,
   getPostmarks: getPostmarks,
+  getConfig: getConfig,
   imageUrl: imageUrl,
 };

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from database import get_db
-from models import PostcardTemplate, PostcardStamp, PostcardPostmark
+from models import PostcardTemplate, PostcardStamp, PostcardPostmark, Config
 from api.auth import verify_admin, verify_user
 
 router = APIRouter(prefix="/api/materials", tags=["materials"])
@@ -326,3 +326,38 @@ def seed_defaults(db: Session = Depends(get_db), _: str = Depends(verify_admin))
     if skipped:
         msg += f"，跳过 {skipped} 条已存在记录"
     return JSONResponse(content={"success": True, "message": msg}, headers=NO_CACHE)
+
+
+# ======== Config (group order + defaults) ========
+
+CONFIG_KEYS = ["group_order", "default_template", "default_stamp", "default_postmark"]
+
+@router.get("/config")
+def get_config(db: Session = Depends(get_db), _: dict = Depends(verify_user)):
+    result = {}
+    for key in CONFIG_KEYS:
+        row = db.query(Config).filter(Config.key == key).first()
+        val = row.value if row else ""
+        if key == "group_order":
+            result[key] = [g for g in val.split(",") if g] if val else []
+        else:
+            result[key] = val
+    return JSONResponse(content=result, headers=NO_CACHE)
+
+
+@router.put("/config")
+def put_config(data: dict, db: Session = Depends(get_db), _: str = Depends(verify_admin)):
+    for key in CONFIG_KEYS:
+        if key in data:
+            val = data[key]
+            if key == "group_order":
+                val = ",".join(val) if isinstance(val, list) else str(val)
+            else:
+                val = str(val) if val else ""
+            row = db.query(Config).filter(Config.key == key).first()
+            if row:
+                row.value = val
+            else:
+                db.add(Config(key=key, value=val))
+    db.commit()
+    return JSONResponse(content={"success": True}, headers=NO_CACHE)

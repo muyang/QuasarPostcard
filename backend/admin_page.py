@@ -209,6 +209,7 @@ body{font-family:-apple-system,sans-serif;background:#121212;color:#eee;display:
     <button class="group-tab active" data-group="" onclick="filterByGroup('')">全部</button>
     <span id="groupTabs"></span>
     <button class="group-tab" style="border-style:dashed;color:#7C4DFF" onclick="createGroup()">+ 新建分组</button>
+    <button class="group-tab" style="border-style:dashed;color:#FFB74D" onclick="openGroupSort()">↕ 分组排序</button>
   </div>
   <div id="batchBar">
     <input type="checkbox" class="card-check show" id="selectAllCheck" onchange="toggleSelectAll()" title="全选/取消">
@@ -266,6 +267,7 @@ let zoomOffset = 0;
 let showGrid = false;
 let activeEl = null; // currently selected canvas element
 let dragState = null; // { el, type:'move'|'rotate'|'resize', startX, startY, startLeft, startTop, startRot, startScale, corner }
+let _defaults = { template: '', stamp: '', postmark: '' };
 let allStamps = []; // cached stamps for stamp selector
 let allPostmarks = []; // cached postmarks for postmark selector
 let selectedIds = new Set(); // batch selection
@@ -321,7 +323,17 @@ async function refreshGroupTabs() {
   allTemplates.forEach(t => { if (t.template_group) groups.add(t.template_group); });
   // Also include templates from cachedItems (which may include drafts)
   cachedItems.forEach(t => { if (t.template_group) groups.add(t.template_group); });
-  const tabsHtml = Array.from(groups).sort().map(g =>
+  // Sort by saved group_order
+  let sortedGroups = Array.from(groups).sort();
+  try {
+    const cfg = await api('/api/materials/config');
+    if (cfg.group_order && cfg.group_order.length > 0) {
+      const ordered = cfg.group_order.filter(g => groups.has(g));
+      const remaining = sortedGroups.filter(g => !cfg.group_order.includes(g));
+      sortedGroups = [...ordered, ...remaining];
+    }
+  } catch(e) {}
+  const tabsHtml = sortedGroups.map(g =>
     `<button class="group-tab${currentGroup === g ? ' active' : ''}" data-group="${g}" onclick="filterByGroup('${g.replace(/'/g, "\\'")}')">${g}</button>`
   ).join('');
   document.getElementById('groupTabs').innerHTML = tabsHtml;
@@ -365,9 +377,10 @@ async function load(page){
   if (search) url += `&search=${encodeURIComponent(search)}`;
   if (currentGroup && currentTab === 'templates') url += `&group=${encodeURIComponent(currentGroup)}`;
   try {
-    const data = await api(url);
+    const [data, cfg] = await Promise.all([api(url), api('/api/materials/config').catch(() => ({}))]);
     totalCount = data.total || 0;
     cachedItems = data.items || [];
+    _defaults = { template: cfg.default_template || '', stamp: cfg.default_stamp || '', postmark: cfg.default_postmark || '' };
     render(cachedItems);
     renderPagination();
     if (currentTab === 'templates') loadAllMaterials();
@@ -409,6 +422,9 @@ function render(items){
     const isChecked = selectedIds.has(item.id);
     let previewHtml, sub;
     const stBadge = `<span class="badge badge-${item.status||'draft'}">${statusLabel(item.status)}</span>`;
+    const defaultKey = currentTab === 'templates' ? 'template' : currentTab === 'stamps' ? 'stamp' : 'postmark';
+    const isDefault = _defaults[defaultKey] === item.id;
+    const defaultStar = `<span title="${isDefault?'取消默认':'设为默认'}" onclick="event.stopPropagation();setDefaultMaterial('${currentTab}','${item.id}')" style="cursor:pointer;font-size:14px;margin-left:4px">${isDefault?'⭐':'☆'}</span>`;
     if(currentTab==='templates'){
       const grad=`linear-gradient(135deg,#${item.gradient_from},#${item.gradient_mid||item.gradient_from},#${item.gradient_to})`;
       const bgImg=item.image_url?`background-image:url(${item.image_url});background-size:cover;`:'';
@@ -428,7 +444,7 @@ function render(items){
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0" onclick="selectItem('${item.id}')" style="cursor:pointer">
         ${previewHtml}
         <div class="info">
-          <div class="title-row"><span class="title">${item.name||item.label}</span>${stBadge}</div>
+          <div class="title-row"><span class="title">${item.name||item.label}</span>${stBadge}${defaultStar}</div>
           <div class="sub">${sub}</div>
         </div>
       </div>
@@ -1546,6 +1562,98 @@ document.addEventListener('keydown', function(e) {
 window.addEventListener('resize', () => {
   applyCanvasZoom();
 });
+
+// ======== Group Sort Dialog ========
+
+let _sortGroups = [];
+
+async function openGroupSort() {
+  const allTemplates = await loadAllTemplates();
+  const groups = new Set();
+  allTemplates.forEach(t => { if (t.template_group) groups.add(t.template_group); });
+  cachedItems.forEach(t => { if (t.template_group) groups.add(t.template_group); });
+  _sortGroups = Array.from(groups).sort();
+
+  // Load current order from config
+  try {
+    const cfg = await api('/api/materials/config');
+    if (cfg.group_order && cfg.group_order.length > 0) {
+      // Merge: ordered first, then any new groups not in the order
+      const ordered = cfg.group_order.filter(g => groups.has(g));
+      const remaining = _sortGroups.filter(g => !cfg.group_order.includes(g));
+      _sortGroups = [...ordered, ...remaining];
+    }
+  } catch(e) {}
+
+  _renderSortDialog();
+}
+
+function _renderSortDialog() {
+  let dlg = document.getElementById('groupSortDlg');
+  if (!dlg) {
+    dlg = document.createElement('div');
+    dlg.id = 'groupSortDlg';
+    dlg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center';
+    document.body.appendChild(dlg);
+  }
+  const rows = _sortGroups.map((g, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#1E1E3A;border-radius:6px;margin:4px 0">
+      <span style="color:#888;width:20px;text-align:center;font-size:11px">${i+1}</span>
+      <span style="flex:1;font-size:13px">${g}</span>
+      <button class="btn btn-outline btn-small" onclick="moveGroup(${i},-1)" ${i===0?'disabled':''}  style="padding:2px 8px">↑</button>
+      <button class="btn btn-outline btn-small" onclick="moveGroup(${i},1)" ${i===_sortGroups.length-1?'disabled':''} style="padding:2px 8px">↓</button>
+    </div>
+  `).join('');
+  dlg.innerHTML = `
+    <div style="background:#13132B;border-radius:12px;padding:20px;min-width:280px;max-height:70vh;overflow-y:auto;border:1px solid #333">
+      <h3 style="margin:0 0 12px;font-size:15px;color:#fff">分组排序</h3>
+      <div style="font-size:11px;color:#888;margin-bottom:8px">拖拽或使用箭头调整分组显示顺序</div>
+      <div id="groupSortList">${rows}</div>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="closeGroupSort()">取消</button>
+        <button class="btn btn-primary" onclick="saveGroupSort()">保存</button>
+      </div>
+    </div>
+  `;
+}
+
+function moveGroup(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= _sortGroups.length) return;
+  const tmp = _sortGroups[idx];
+  _sortGroups[idx] = _sortGroups[newIdx];
+  _sortGroups[newIdx] = tmp;
+  _renderSortDialog();
+}
+
+function closeGroupSort() {
+  const dlg = document.getElementById('groupSortDlg');
+  if (dlg) dlg.remove();
+}
+
+async function saveGroupSort() {
+  try {
+    await api('/api/materials/config', 'PUT', { group_order: _sortGroups });
+    closeGroupSort();
+    refreshGroupTabs();
+  } catch(e) { alert('保存失败: ' + e.message); }
+}
+
+// ======== Set Default Material ========
+
+async function setDefaultMaterial(type, id) {
+  const keyMap = { templates: 'default_template', stamps: 'default_stamp', postmarks: 'default_postmark' };
+  const key = keyMap[type];
+  if (!key) return;
+  // Toggle: if already default, clear it
+  try {
+    const cfg = await api('/api/materials/config');
+    const newVal = (cfg[key] === id) ? '' : id;
+    await api('/api/materials/config', 'PUT', { [key]: newVal });
+    alert(newVal ? `已设为默认${type === 'templates' ? '模板' : type === 'stamps' ? '邮票' : '邮戳'}` : '已取消默认');
+    load(currentPage);
+  } catch(e) { alert('设置失败: ' + e.message); }
+}
 
 // Initialize
 applyCanvasZoom();

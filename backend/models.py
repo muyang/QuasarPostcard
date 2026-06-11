@@ -117,3 +117,9 @@ class PostcardPostmark(Base):
     color = Column(String(16), nullable=False, default="333333")
     image_url = Column(String(512), nullable=True)
     status = Column(String(32), nullable=False, default="draft")
+
+
+class Config(Base):
+    __tablename__ = "config"
+    key = Column(String(64), primary_key=True)
+    value = Column(Text, default="")

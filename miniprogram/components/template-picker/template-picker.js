@@ -7,6 +7,7 @@ Component({
     templates: { type: Array, value: [], observer: '_onItemsChange' },
     selected: { type: String, value: '' },
     loading: { type: Boolean, value: false },
+    groupOrder: { type: Array, value: [], observer: '_onItemsChange' },
   },
 
   data: {
@@ -29,6 +30,17 @@ Component({
           groupOrder.push(g);
         }
       });
+      // Sort groups by configured order
+      var order = self.data.groupOrder || [];
+      if (order && order.length > 0) {
+        groupOrder.sort(function(a, b) {
+          var ai = order.indexOf(a);
+          var bi = order.indexOf(b);
+          var aIdx = ai >= 0 ? ai : 9999;
+          var bIdx = bi >= 0 ? bi : 9999;
+          return aIdx - bIdx;
+        });
+      }
       self.setData({ groups: groupOrder });
       // Auto-select group containing the currently selected template
       var activeGroup = self.data.activeGroup;

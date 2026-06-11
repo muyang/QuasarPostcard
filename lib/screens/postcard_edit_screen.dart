@@ -37,17 +37,44 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
         ApiService.getTemplates(),
         ApiService.getStamps(),
         ApiService.getPostmarks(),
+        ApiService.getConfig(),
       ]);
       if (!mounted) return;
       final templates = results[0] as List<Map<String, dynamic>>;
       final stamps = results[1] as List<Map<String, dynamic>>;
       final postmarks = results[2] as List<Map<String, dynamic>>;
+      final config = results[3] as Map<String, dynamic>?;
+
       setState(() {
+        final tplList = templates.map((j) => PostcardTemplate.fromJson(j)).toList();
+        final stampList = stamps.map((j) => PostcardStamp.fromJson(j)).toList();
+        final pmkList = postmarks.map((j) => PostcardPostmark.fromJson(j)).toList();
+        final groupOrder = config != null && config['group_order'] is List
+            ? List<String>.from(config['group_order'])
+            : <String>[];
         _design.updateMaterials(
-          templates: templates.map((j) => PostcardTemplate.fromJson(j)).toList(),
-          stamps: stamps.map((j) => PostcardStamp.fromJson(j)).toList(),
-          postmarks: postmarks.map((j) => PostcardPostmark.fromJson(j)).toList(),
+          templates: tplList,
+          stamps: stampList,
+          postmarks: pmkList,
+          groupOrder: groupOrder,
         );
+
+        // Apply defaults for new designs
+        if (widget.initialDesign == null && config != null) {
+          final defTpl = config['default_template'] as String? ?? '';
+          final defStamp = config['default_stamp'] as String? ?? '';
+          final defPmk = config['default_postmark'] as String? ?? '';
+          if (defTpl.isNotEmpty && tplList.any((t) => t.id == defTpl)) {
+            _design.templateId = defTpl;
+          }
+          if (defStamp.isNotEmpty && stampList.any((s) => s.id == defStamp)) {
+            _design.stampId = defStamp;
+          }
+          if (defPmk.isNotEmpty && pmkList.any((p) => p.id == defPmk)) {
+            _design.postmarkId = defPmk;
+          }
+        }
+
         _materialsLoading = false;
       });
     } catch (_) {

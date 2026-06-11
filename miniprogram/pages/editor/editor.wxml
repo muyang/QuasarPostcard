@@ -33,6 +33,7 @@
         templates="{{templates}}"
         selected="{{design.template_id}}"
         loading="{{loading}}"
+        groupOrder="{{groupOrder}}"
         bind:select="onTemplateSelect"
       />
       <view class="step-nav">

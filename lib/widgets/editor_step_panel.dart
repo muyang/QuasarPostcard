@@ -68,7 +68,7 @@ class EditorStepPanel extends StatelessWidget {
       id: design.id,
       status: design.status,
     );
-    d.updateMaterials(templates: design.templates, stamps: design.stamps, postmarks: design.postmarks);
+    d.updateMaterials(templates: design.templates, stamps: design.stamps, postmarks: design.postmarks, groupOrder: design.groupOrder);
     fn(d);
     onDesignChanged(d);
   }
@@ -173,7 +173,19 @@ class _TemplateStepState extends State<_TemplateStep> {
     for (final t in widget.design.templates) {
       groups.add(t.templateGroup);
     }
-    return ['全部', ...groups.toList()];
+    final allGroups = groups.toList();
+    // Sort by groupOrder from config
+    final order = widget.design.groupOrder;
+    if (order.isNotEmpty) {
+      allGroups.sort((a, b) {
+        final ai = order.indexOf(a);
+        final bi = order.indexOf(b);
+        final aIdx = ai >= 0 ? ai : 9999;
+        final bIdx = bi >= 0 ? bi : 9999;
+        return aIdx.compareTo(bIdx);
+      });
+    }
+    return ['全部', ...allGroups];
   }
 
   @override
