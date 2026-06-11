@@ -4,10 +4,10 @@ var constants = require('../../utils/constants');
 
 Component({
   properties: {
-    templates: { type: Array, value: [], observer: '_onItemsChange' },
+    templates: { type: Array, value: [], observer: '_onTemplatesChange' },
     selected: { type: String, value: '' },
     loading: { type: Boolean, value: false },
-    groupOrder: { type: Array, value: [], observer: '_onItemsChange' },
+    groupOrder: { type: Array, value: [], observer: '_onGroupOrderChange' },
   },
 
   data: {
@@ -17,23 +17,45 @@ Component({
   },
 
   methods: {
-    _onItemsChange: function(items) {
+    _onTemplatesChange: function(items) {
+      if (!items || !items.length) return;
+      this._recomputeGroups();
+      // Preload images
+      var self = this;
+      items.forEach(function(item, idx) {
+        if (!item.image_url) return;
+        var url = item.display_url || api.imageUrl(item.image_url, 'thumb');
+        imageCache.loadImage(url).then(function(localPath) {
+          if (localPath) {
+            self.setData({ ['templates[' + idx + '].local_img']: localPath });
+          }
+        }).catch(function() {});
+      });
+    },
+
+    _onGroupOrderChange: function() {
+      if (!this.data.templates || !this.data.templates.length) return;
+      this._recomputeGroups();
+    },
+
+    _recomputeGroups: function() {
+      var items = this.data.templates;
       if (!items || !items.length) return;
       var self = this;
       // Compute unique groups
       var groupSet = {};
-      var groupOrder = [];
+      var groupList = [];
       items.forEach(function(item) {
         var g = item.template_group || '默认';
         if (!groupSet[g]) {
           groupSet[g] = true;
-          groupOrder.push(g);
+          groupList.push(g);
         }
       });
       // Sort groups by configured order
       var order = self.data.groupOrder || [];
       if (order && order.length > 0) {
-        groupOrder.sort(function(a, b) {
+        groupList.sort(function(a, b) {
           var ai = order.indexOf(a);
           var bi = order.indexOf(b);
           var aIdx = ai >= 0 ? ai : 9999;
@@ -41,7 +63,7 @@ Component({
           return aIdx - bIdx;
         });
       }
-      self.setData({ groups: groupOrder });
+      self.setData({ groups: groupList });
       // Auto-select group containing the currently selected template
       var activeGroup = self.data.activeGroup;
       if (self.data.selected) {
@@ -52,21 +74,11 @@ Component({
           }
         }
       }
-      if (!activeGroup || groupOrder.indexOf(activeGroup) === -1) {
-        activeGroup = groupOrder[0] || '';
+      if (!activeGroup || groupList.indexOf(activeGroup) === -1) {
+        activeGroup = groupList[0] || '';
       }
       self.setData({ activeGroup: activeGroup });
       self._filterTemplates();
-      // Preload images
-      items.forEach(function(item, idx) {
-        if (!item.image_url) return;
-        var url = item.display_url || api.imageUrl(item.image_url, 'thumb');
-        imageCache.loadImage(url).then(function(localPath) {
-          if (localPath) {
-            self.setData({ ['templates[' + idx + '].local_img']: localPath });
-          }
-        }).catch(function() {});
-      });
     },
 
     _filterTemplates: function() {
