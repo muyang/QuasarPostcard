@@ -6,22 +6,35 @@
   <view wx:if="{{loading && stamps.length === 0}}" class="loading">
     <view class="spinner"></view>
   </view>
-  <view wx:else class="grid">
-    <view
-      wx:for="{{stamps}}"
-      wx:key="id"
-      class="card {{selected === item.id ? 'selected' : ''}}"
-      data-id="{{item.id}}"
-      bindtap="onSelect"
-    >
-      <image
-        wx:if="{{item.local_img}}"
-        class="stamp-img"
-        src="{{item.local_img}}"
-        mode="aspectFill"
-      />
-      <text wx:else class="stamp-emoji {{selected === item.id ? 'emoji-big' : ''}}">{{item.emoji}}</text>
-      <text class="stamp-label">{{item.label}}</text>
+  <view wx:else>
+    <scroll-view class="group-tabs" scroll-x enable-flex>
+      <view
+        wx:for="{{groups}}"
+        wx:key="id"
+        class="group-tab {{activeGroup === item.id ? 'group-tab-active' : ''}}"
+        data-group="{{item.id}}"
+        bindtap="onGroupTap"
+      >
+        <text class="group-tab-text">{{item.name}}</text>
+      </view>
+    </scroll-view>
+    <view class="grid">
+      <view
+        wx:for="{{filteredStamps}}"
+        wx:key="id"
+        class="card {{selected === item.id ? 'selected' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onSelect"
+      >
+        <image
+          wx:if="{{item.local_img}}"
+          class="stamp-img"
+          src="{{item.local_img}}"
+          mode="aspectFill"
+        />
+        <text wx:else class="stamp-emoji {{selected === item.id ? 'emoji-big' : ''}}">{{item.emoji}}</text>
+        <text class="stamp-label">{{item.label}}</text>
+      </view>
     </view>
   </view>
 </view>

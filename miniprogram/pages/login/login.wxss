@@ -28,6 +28,35 @@
   to { transform: rotate(360deg); }
 }
 
+/* Brand */
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 56rpx;
+}
+
+.brand-logo {
+  width: 256rpx;
+  height: 256rpx;
+  margin-bottom: 16rpx;
+}
+
+.brand-name {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #D4A5A5;
+  letter-spacing: 2rpx;
+}
+
+.brand-slogan {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 2rpx;
+  margin-top: 8rpx;
+}
+
 .login-center {
   display: flex;
   flex-direction: column;

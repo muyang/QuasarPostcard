@@ -7,7 +7,8 @@
     bindtap="onTap"
   >
     <view class="step-circle {{current === index ? 'active' : (current > index ? 'done' : '')}}">
-      <text class="step-icon">{{item.icon === 'palette' ? '🎨' : item.icon === 'text' ? 'T' : item.icon === 'stamp' ? '🖼️' : item.icon === 'postmark' ? '⭕' : '✉️'}}</text>
+      <!--text class="step-icon">{{item.icon === 'palette' ? '🎨' : item.icon === 'text' ? 'T' : item.icon === 'stamp' ? '🖼️' : item.icon === 'postmark' ? '⭕' : '✉️'}}</text-->
+      <image class="step-icon" src="{{ '/images/' + (item.icon === 'palette' ? 'palette' : item.icon === 'text' ? 'text' : item.icon === 'stamp' ? 'stamp' : item.icon === 'postmark' ? 'postmark' : item.icon === 'send' ? 'send' : 'default') + '.png' }}" mode="aspectFit"></image>
     </view>
     <text class="step-label {{current === index ? 'label-active' : ''}}">{{item.label}}</text>
   </view>

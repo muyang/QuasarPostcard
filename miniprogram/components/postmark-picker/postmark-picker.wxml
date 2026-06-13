@@ -1,24 +1,40 @@
 <view class="picker">
-  <view class="title">选择邮戳</view>
+  <view class="header">
+    <text class="title">选择邮戳</text>
+    <text wx:if="{{selected}}" class="remove-btn" bindtap="onRemove">移除</text>
+  </view>
   <view wx:if="{{loading && postmarks.length === 0}}" class="loading">
     <view class="spinner"></view>
   </view>
-  <view wx:else class="grid">
-    <view
-      wx:for="{{postmarks}}"
-      wx:key="id"
-      class="card {{selected === item.id ? 'selected' : ''}}"
-      data-id="{{item.id}}"
-      bindtap="onSelect"
-    >
-      <image
-        wx:if="{{item.local_img}}"
-        class="pm-img"
-        src="{{item.local_img}}"
-        mode="aspectFit"
-      />
-      <text wx:else class="pm-icon">⭕</text>
-      <text class="pm-label">{{item.label}}</text>
+  <view wx:else>
+    <scroll-view class="group-tabs" scroll-x enable-flex>
+      <view
+        wx:for="{{groups}}"
+        wx:key="id"
+        class="group-tab {{activeGroup === item.id ? 'group-tab-active' : ''}}"
+        data-group="{{item.id}}"
+        bindtap="onGroupTap"
+      >
+        <text class="group-tab-text">{{item.name}}</text>
+      </view>
+    </scroll-view>
+    <view class="grid">
+      <view
+        wx:for="{{filteredPostmarks}}"
+        wx:key="id"
+        class="card {{selected === item.id ? 'selected' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onSelect"
+      >
+        <image
+          wx:if="{{item.local_img}}"
+          class="pm-img"
+          src="{{item.local_img}}"
+          mode="aspectFit"
+        />
+        <text wx:else class="pm-icon">⭕</text>
+        <text class="pm-label">{{item.label}}</text>
+      </view>
     </view>
   </view>
 </view>

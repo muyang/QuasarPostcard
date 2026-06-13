@@ -1,17 +1,19 @@
 /* Global CSS Variables */
 page {
-  --bg-dark: #0D0D1A;
-  --bg-panel: #13132B;
-  --bg-card: #1E1E2E;
-  --bg-input: #2A2A4A;
+  --bg-dark: #2A2A4A;
+  --bg-panel: #333355;
+  --bg-card: #4A4A6E;
+  --bg-card-hover: #52527A;
+  --bg-input: #555577;
   --primary: #7C4DFF;
-  --primary-light: #9B7BFF;
+  --primary-light: #A78BFF;
+  --primary-glow: rgba(124, 77, 255, 0.35);
   --text-primary: #FFFFFF;
-  --text-secondary: #8888AA;
-  --text-muted: #555577;
-  --border: #2A2A4A;
+  --text-secondary: #B8B8D4;
+  --text-muted: #8888AA;
+  --border: rgba(255, 255, 255, 0.15);
   --wechat-green: #07C160;
-  --danger: #C62828;
+  --danger: #FF5252;
   --success: #4CAF50;
 
   background-color: var(--bg-dark);

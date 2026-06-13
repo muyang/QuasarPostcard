@@ -105,6 +105,14 @@ function getConfig() {
   return request('GET', '/api/materials/config', {}).catch(function() { return {}; });
 }
 
+function getStampGroups() {
+  return request('GET', '/api/materials/stamp-groups', {});
+}
+
+function getPostmarkGroups() {
+  return request('GET', '/api/materials/postmark-groups', {});
+}
+
 // Image URL helper
 function imageUrl(path, size) {
   if (!path) return '';
@@ -130,5 +138,7 @@ module.exports = {
   getStamps: getStamps,
   getPostmarks: getPostmarks,
   getConfig: getConfig,
+  getStampGroups: getStampGroups,
+  getPostmarkGroups: getPostmarkGroups,
   imageUrl: imageUrl,
 };

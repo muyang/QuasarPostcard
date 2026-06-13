@@ -4,13 +4,18 @@
     <view class="spinner"></view>
   </view>
 
-  <!-- Login content: centered button + hint -->
+  <!-- Login content: brand + centered button + hint -->
   <block wx:else>
+    <view class="login-brand">
+      <image class="brand-logo" src="/images/logo.png" mode="aspectFit" />
+      <text class="brand-name">MiowlCard</text>
+      <text class="brand-slogan">传递爱与祝福～</text>
+    </view>
     <view class="login-center">
       <view class="wx-login-btn {{logging ? 'disabled' : ''}}" bindtap="onLogin">
-        <text class="wx-login-text">{{logging ? '登录中...' : '微信登录'}}</text>
+        <text class="wx-login-text">{{logging ? '登录中...' : '登录'}}</text>
       </view>
-      <text class="login-hint">微信登录后可保存和分享明信片</text>
+      <text class="login-hint">登录后可保存和分享明信片</text>
     </view>
   </block>
 </view>

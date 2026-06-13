@@ -4,7 +4,7 @@
 
 .title {
   font-size: 28rpx;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 500;
   margin-bottom: 12rpx;
 }
@@ -20,18 +20,19 @@
   padding: 8rpx 20rpx;
   margin-right: 10rpx;
   border-radius: 20rpx;
-  border: 2rpx solid rgba(255, 255, 255, 0.15);
-  background: transparent;
+  border: 1rpx solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .group-tab-active {
-  background: #7C4DFF;
-  border-color: #7C4DFF;
+  background: linear-gradient(135deg, #7C4DFF, #9B7BFF);
+  border-color: transparent;
+  box-shadow: 0 2rpx 8rpx rgba(124, 77, 255, 0.35);
 }
 
 .group-tab-text {
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .group-tab-active .group-tab-text {
@@ -73,15 +74,17 @@
   align-items: center;
   justify-content: center;
   padding: 8rpx 0;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 24rpx;
-  border: 2rpx solid rgba(255, 255, 255, 0.1);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 }
 
 .card.selected {
+  background: rgba(124, 77, 255, 0.12);
   border-color: #7C4DFF;
-  border-width: 4rpx;
-  box-shadow: 0 0 16rpx rgba(124, 77, 255, 0.25);
+  border-width: 3rpx;
+  box-shadow: 0 0 20rpx rgba(124, 77, 255, 0.25);
 }
 
 .card-img {
@@ -92,7 +95,7 @@
 
 .card-name {
   font-size: 20rpx;
-  color: rgba(255, 255, 255, 0.54);
+  color: rgba(255, 255, 255, 0.65);
   font-weight: 500;
   margin-top: 4rpx;
 }

@@ -19,21 +19,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1E1E3A;
-  border: 3rpx solid #2A2A4A;
+  background: rgba(255, 255, 255, 0.08);
+  border: 3rpx solid rgba(255, 255, 255, 0.12);
   transition: all 0.25s;
 }
 
 .step-circle.active {
   width: 72rpx;
   height: 72rpx;
-  background: #7C4DFF;
-  border-color: #9B7BFF;
+  background: rgba(124, 77, 255, 0.25);
+  border-color: rgba(155, 123, 255, 0.6);
+  box-shadow: 0 0 12rpx rgba(124, 77, 255, 0.3);
 }
 
 .step-circle.done {
-  background: rgba(124, 77, 255, 0.25);
-  border-color: rgba(124, 77, 255, 0.4);
+  background: rgba(124, 77, 255, 0.15);
+  border-color: rgba(124, 77, 255, 0.35);
 }
 
 .step-icon {
@@ -46,11 +47,11 @@
 
 .step-label {
   font-size: 20rpx;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.45);
   margin-top: 6rpx;
 }
 
 .step-label.label-active {
-  color: #7C4DFF;
+  color: #A78BFF;
   font-weight: 600;
 }

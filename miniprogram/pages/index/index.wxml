@@ -26,14 +26,15 @@ module.exports = { isSelected: isSelected, findTemplate: findTemplate };
 <!-- ===== Not logged in: centered login ===== -->
 <view wx:if="{{!loggedIn && !loading}}" class="login-state">
   <view class="login-brand">
-    <image class="brand-logo" src="/images/logo_28x28.png" mode="aspectFit" />
+    <image class="brand-logo" src="/images/logo.png" mode="aspectFit" />
     <text class="brand-name">MiowlCard</text>
+    <text class="brand-slogan">传递爱与祝福～</text>
   </view>
   <view class="login-center">
     <view class="wx-login-btn {{logging ? 'disabled' : ''}}" bindtap="onLogin">
-      <text class="wx-login-text">{{logging ? '登录中...' : '微信登录'}}</text>
+      <text class="wx-login-text">{{logging ? '登录中...' : '登录'}}</text>
     </view>
-    <text class="login-hint">微信登录后可保存和分享明信片</text>
+    <text class="login-hint">登录后可保存和分享明信片</text>
   </view>
 </view>
 
