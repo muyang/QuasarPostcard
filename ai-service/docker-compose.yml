@@ -4,8 +4,9 @@ services:
     build: .
     container_name: anime-worker-0
     environment:
+      # device_ids below pins this container to physical GPU 0; inside the
+      # container that GPU is renumbered to cuda:0, so GPU_ID must stay 0.
       - GPU_ID=0
-      - CUDA_VISIBLE_DEVICES=0
       - EAGER_LOAD=1
       - SD_BASE_MODEL=runwayml/stable-diffusion-v1-5
       - CONTROLNET_MODEL=lllyasviel/control_v11f1p_sd15_depth
@@ -28,8 +29,9 @@ services:
     build: .
     container_name: anime-worker-1
     environment:
-      - GPU_ID=1
-      - CUDA_VISIBLE_DEVICES=1
+      # device_ids below pins this container to physical GPU 1; inside the
+      # container that GPU is renumbered to cuda:0, so GPU_ID must stay 0.
+      - GPU_ID=0
       - EAGER_LOAD=1
       - SD_BASE_MODEL=runwayml/stable-diffusion-v1-5
       - CONTROLNET_MODEL=lllyasviel/control_v11f1p_sd15_depth
