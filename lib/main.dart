@@ -1,4 +1,5 @@
 import 'dart:html' as html;
+import 'theme/app_colors.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -22,24 +23,24 @@ class CardDesignerApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
+        scaffoldBackgroundColor: AppColors.scaffoldBackground,
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF7C4DFF),
-          secondary: Color(0xFFB794FF),
-          surface: Color(0xFF1A1A2E),
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          surface: AppColors.surface,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1A1A2E),
+          backgroundColor: AppColors.surface,
           foregroundColor: Colors.white,
           elevation: 0,
         ),
         cardTheme: const CardThemeData(
-          color: Color(0xFF1E1E2E),
+          color: AppColors.surface,
           elevation: 2,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFF2A2A4A),
+          fillColor: AppColors.inputFill,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: Color(0xFF444444)),
@@ -50,9 +51,9 @@ class CardDesignerApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF7C4DFF)),
+            borderSide: const BorderSide(color: AppColors.primary),
           ),
-          labelStyle: const TextStyle(color: Color(0xFF888888)),
+          labelStyle: const TextStyle(color: AppColors.textLabel),
         ),
       ),
       home: const AuthGate(),
@@ -83,17 +84,22 @@ class _AuthGateState extends State<AuthGate> {
         await ApiService.logout();
       }
     }
-    // Auto-login for local web testing (skip WeChat OAuth)
+    // Auto-login for local web testing only (skip WeChat OAuth).
+    // Credentials come from --dart-define flags, never hardcoded.
     if (!ApiService.isAuthenticated && kIsWeb) {
-      try {
-        final origin = html.window.location.origin ?? '';
-        if (origin.isNotEmpty) {
-          final result = await ApiService.login('admin', 'postcard2024');
-          if (result.success) {
-            await ApiService.saveConfig(origin, result.token!);
+      final autoUser = String.fromEnvironment('AUTO_LOGIN_USER');
+      final autoPass = String.fromEnvironment('AUTO_LOGIN_PASS');
+      if (autoUser.isNotEmpty && autoPass.isNotEmpty) {
+        try {
+          final origin = html.window.location.origin ?? '';
+          if (origin.isNotEmpty) {
+            final result = await ApiService.login(autoUser, autoPass);
+            if (result.success) {
+              await ApiService.saveConfig(origin, result.token!);
+            }
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
     }
     if (mounted) {
       setState(() => _checking = false);
@@ -104,7 +110,7 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     if (_checking) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: Color(0xFF7C4DFF))),
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
     if (ApiService.isAuthenticated) {

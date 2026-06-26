@@ -95,17 +95,6 @@ App({
     return self.globalData.loginPromise;
   },
 
-  _resolveImageUrls: function(items) {
-    if (!items || !items.length) return items;
-    return items.map(function(item) {
-      if (item.image_url) {
-        item.display_url = item.image_url.indexOf('http') === 0
-          ? item.image_url
-          : api.imageUrl(item.image_url, 'thumb');
-      }
-      return item;
-    });
-  },
 
   _preloadMaterials: function() {
     var self = this;
@@ -114,9 +103,9 @@ App({
       api.getStamps(),
       api.getPostmarks(),
     ]).then(function(results) {
-      self.globalData.templates = self._resolveImageUrls(results[0]);
-      self.globalData.stamps = self._resolveImageUrls(results[1]);
-      self.globalData.postmarks = self._resolveImageUrls(results[2]);
+      self.globalData.templates = api.resolveUrls(results[0]);
+      self.globalData.stamps = api.resolveUrls(results[1]);
+      self.globalData.postmarks = api.resolveUrls(results[2]);
       self._preloadImages();
     }).catch(function() {});
   },

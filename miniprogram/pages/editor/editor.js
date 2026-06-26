@@ -3,17 +3,6 @@ var renderer = require('../../utils/canvas-renderer');
 var constants = require('../../utils/constants');
 var imageCache = require('../../utils/image-cache');
 
-function resolveUrls(items) {
-  if (!items || !items.length) return items;
-  return items.map(function(item) {
-    if (item.image_url) {
-      item.display_url = item.image_url.indexOf('http') === 0
-        ? item.image_url
-        : api.imageUrl(item.image_url, 'thumb');
-    }
-    return item;
-  });
-}
 
 Page({
   data: {
@@ -129,20 +118,36 @@ Page({
     };
   },
 
+  // Apply default material from config, or fall back to first item.
+  _applyDefault: function(items, defaultId, designField, isNew, design) {
+    if (isNew && defaultId) {
+      var has = items.some(function(item) { return item.id === defaultId; });
+      if (has) { design[designField] = defaultId; return; }
+    }
+    if (!design[designField] && items.length > 0) {
+      design[designField] = items[0].id;
+    }
+  },
+
+  // Fetch cached or fresh materials, resolving display URLs.
+  _fetchMaterials: function(typeKey, fetchFn, app) {
+    var cached = app.globalData[typeKey];
+    if (cached && cached.length > 0) return Promise.resolve(cached);
+    return fetchFn().then(function(items) {
+      var r = api.resolveUrls(items);
+      app.globalData[typeKey] = r;
+      return r;
+    });
+  },
+
   loadMaterials: function() {
     var self = this;
     var app = getApp();
 
     Promise.all([
-      app.globalData.templates && app.globalData.templates.length > 0
-        ? Promise.resolve(app.globalData.templates)
-        : api.getTemplates().then(function(items) { var r = resolveUrls(items); app.globalData.templates = r; return r; }),
-      app.globalData.stamps && app.globalData.stamps.length > 0
-        ? Promise.resolve(app.globalData.stamps)
-        : api.getStamps().then(function(items) { var r = resolveUrls(items); app.globalData.stamps = r; return r; }),
-      app.globalData.postmarks && app.globalData.postmarks.length > 0
-        ? Promise.resolve(app.globalData.postmarks)
-        : api.getPostmarks().then(function(items) { var r = resolveUrls(items); app.globalData.postmarks = r; return r; }),
+      self._fetchMaterials('templates', api.getTemplates, app),
+      self._fetchMaterials('stamps', api.getStamps, app),
+      self._fetchMaterials('postmarks', api.getPostmarks, app),
       api.getConfig(),
     ]).then(function(results) {
       var templates = results[0];
@@ -152,27 +157,11 @@ Page({
       var groupOrder = config.group_order || [];
       var design = self.data.design;
       var isNew = !design.id || design.id === 0;
-      if (isNew && config.default_template) {
-        var hasTpl = templates.some(function(t) { return t.id === config.default_template; });
-        if (hasTpl) design.template_id = config.default_template;
-      }
-      if (!design.template_id && templates.length > 0) {
-        design.template_id = templates[0].id;
-      }
-      if (isNew && config.default_stamp) {
-        var hasStamp = stamps.some(function(s) { return s.id === config.default_stamp; });
-        if (hasStamp) design.stamp_id = config.default_stamp;
-      }
-      if (!design.stamp_id && stamps.length > 0) {
-        design.stamp_id = stamps[0].id;
-      }
-      if (isNew && config.default_postmark) {
-        var hasPmk = postmarks.some(function(p) { return p.id === config.default_postmark; });
-        if (hasPmk) design.postmark_id = config.default_postmark;
-      }
-      if (!design.postmark_id && postmarks.length > 0) {
-        design.postmark_id = postmarks[0].id;
-      }
+
+      self._applyDefault(templates, config.default_template, 'template_id', isNew, design);
+      self._applyDefault(stamps, config.default_stamp, 'stamp_id', isNew, design);
+      self._applyDefault(postmarks, config.default_postmark, 'postmark_id', isNew, design);
+
       self.setData({
         templates: templates,
         stamps: stamps,
@@ -515,35 +504,8 @@ Page({
     var canvasH = self.data.canvasH;
     var touchX = touch.x;
     var touchY = touch.y;
-    var scaleX = canvasW / 375;
-    var scaleY = canvasH / 243;
 
-    var fields = [
-      {
-        key: 'to_name',
-        name: '收件人',
-        x: (template.to_x !== undefined ? template.to_x : 55) / 100 * canvasW,
-        y: (template.to_y !== undefined ? template.to_y : 82) / 100 * canvasH,
-        w: (template.to_w !== undefined ? template.to_w : 120) * scaleX,
-        h: (template.to_h !== undefined ? template.to_h : 28) * scaleY,
-      },
-      {
-        key: 'from_name',
-        name: '寄件人',
-        x: (template.from_x !== undefined ? template.from_x : 10) / 100 * canvasW,
-        y: (template.from_y !== undefined ? template.from_y : 82) / 100 * canvasH,
-        w: (template.from_w !== undefined ? template.from_w : 120) * scaleX,
-        h: (template.from_h !== undefined ? template.from_h : 28) * scaleY,
-      },
-      {
-        key: 'message',
-        name: '祝福语',
-        x: (template.message_x !== undefined ? template.message_x : 10) / 100 * canvasW,
-        y: (template.message_y !== undefined ? template.message_y : 60) / 100 * canvasH,
-        w: (template.message_w !== undefined ? template.message_w : 80) * scaleX,
-        h: (template.message_h !== undefined ? template.message_h : 80) * scaleY,
-      },
-    ];
+    var fields = constants.getFieldBounds(template, canvasW, canvasH);
 
     var clickedField = null;
     for (var j = 0; j < fields.length; j++) {

@@ -255,4 +255,41 @@ class ApiService {
     }
     throw Exception('Upload failed: ${resp.statusCode}');
   }
+
+  /// Convert a portrait photo to anime style via the AI service.
+  /// Returns the saved image URL, or null on failure.
+  static Future<String?> animeFace(String imageBase64, {String prompt = ''}) async {
+    try {
+      final resp = await http.post(
+        Uri.parse('$_baseUrl/api/ai/anime-face'),
+        headers: _headers,
+        body: jsonEncode({'image_base64': imageBase64, 'prompt': prompt}),
+      ).timeout(const Duration(seconds: 120));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        if (data['success'] == true) {
+          return data['image_url'] as String?;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Upload a share image (PNG bytes) and return the server-side URL.
+  static Future<String> uploadShareImage(Uint8List bytes) async {
+    final base64Data = base64Encode(bytes);
+    final resp = await http.post(
+      Uri.parse('$_baseUrl/api/share/upload-image'),
+      headers: _headers,
+      body: jsonEncode({'image_data': base64Data}),
+    );
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      if (data['success'] == true) {
+        return data['url'] as String? ?? '';
+      }
+      throw Exception(data['detail'] ?? 'Upload failed');
+    }
+    throw Exception('Upload failed: ${resp.statusCode}');
+  }
 }

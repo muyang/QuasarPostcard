@@ -1,7 +1,7 @@
 import 'dart:math';
+import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../models/postcard.dart';
-import '../services/api_service.dart';
 import 'app_image.dart';
 
 class PostcardCanvas extends StatelessWidget {
@@ -117,16 +117,22 @@ class PostcardCanvas extends StatelessWidget {
     final stScl = template.stampScale / 100;
     final stW = 52.0 * stScl;
     final stH = 62.0 * stScl;
-    final rotRad = template.stampRotation * 3.14159 / 180;
+    final rotRad = template.stampRotation * pi / 180;
 
-    final content = stamp != null
-        ? (stamp.imageUrl != null && stamp.imageUrl!.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: AppImage(url: stamp.imageUrl, width: stW, height: stH, fit: BoxFit.cover, errorWidget: () => Text(stamp.emoji, style: TextStyle(fontSize: stScl * 22))),
-              )
-            : Center(child: Text(stamp.emoji, style: TextStyle(fontSize: stScl * 22))))
-        : SizedBox(width: stW, height: stH, child: CustomPaint(painter: _DashedRectPainter()));
+    final customStampUrl = design.customStampImageUrl;
+    final content = (customStampUrl != null && customStampUrl.isNotEmpty)
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: AppImage(url: customStampUrl, width: stW, height: stH, fit: BoxFit.cover),
+          )
+        : stamp != null
+            ? (stamp.imageUrl != null && stamp.imageUrl!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: AppImage(url: stamp.imageUrl, width: stW, height: stH, fit: BoxFit.cover, errorWidget: () => Text(stamp.emoji, style: TextStyle(fontSize: stScl * 22))),
+                  )
+                : Center(child: Text(stamp.emoji, style: TextStyle(fontSize: stScl * 22))))
+            : SizedBox(width: stW, height: stH, child: CustomPaint(painter: _DashedRectPainter()));
 
     return Positioned(
       left: canvasW * template.stampX / 100,
@@ -145,7 +151,7 @@ class PostcardCanvas extends StatelessWidget {
   Widget _postmarkElement(PostcardTemplate template, PostcardPostmark? postmark) {
     final pmkScl = template.postmarkScale / 100;
     final pmkSize = 72.0 * pmkScl;
-    final rotRad = template.postmarkRotation * 3.14159 / 180;
+    final rotRad = template.postmarkRotation * pi / 180;
 
     Widget inner;
     if (postmark != null) {
@@ -296,7 +302,7 @@ class _PostmarkPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8;
     for (int i = 0; i < 24; i++) {
-      final angle = i * (3.14159 * 2 / 24);
+      final angle = i * (pi * 2 / 24);
       final r1 = radius - 4;
       final r2 = radius - 9;
       canvas.drawLine(
@@ -324,7 +330,7 @@ class _GeometricPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF888888).withOpacity(0.08)
+      ..color = AppColors.textLabel.withOpacity(0.08)
       ..strokeWidth = 0.5;
 
     const spacing = 24.0;
@@ -348,7 +354,7 @@ class _WavePatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF4488AA).withOpacity(0.1)
+      ..color = AppColors.wavePattern.withOpacity(0.1)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
@@ -388,7 +394,7 @@ class _DashedCirclePainter extends CustomPainter {
 
   void _drawDashedCircle(Canvas canvas, Offset center, double radius, Paint paint) {
     const dashCount = 32;
-    const dashAngle = 3.14159 * 2 / dashCount;
+    const dashAngle = pi * 2 / dashCount;
     for (int i = 0; i < dashCount; i += 2) {
       final startAngle = i * dashAngle;
       final sweepAngle = dashAngle;

@@ -1,8 +1,6 @@
-import 'dart:async';
+import '../theme/app_colors.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'dart:convert';
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -10,7 +8,6 @@ import '../services/api_service.dart';
 import '../services/wechat_share_service.dart';
 import '../services/email_share_service.dart';
 import '../utils/download_helper.dart';
-import '../utils/launcher.dart';
 
 class ShareSheet extends StatefulWidget {
   final Uint8List imageBytes;
@@ -31,7 +28,7 @@ class ShareSheet extends StatefulWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1E36),
+      backgroundColor: AppColors.surfaceVariant,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => ShareSheet(imageBytes: bytes, filename: filename),
     );
@@ -53,50 +50,15 @@ class _ShareSheetState extends State<ShareSheet> {
   }
 
   Future<void> _uploadShareImage() async {
-    final completer = Completer<void>();
     try {
-      final uri = Uri.parse('${ApiService.baseUrl}/api/share/upload-image');
-      final base64Data = base64Encode(widget.imageBytes);
-
-      final xhr = html.HttpRequest()
-        ..open('POST', uri.toString())
-        ..setRequestHeader('Content-Type', 'application/json')
-        ..setRequestHeader('Authorization', 'Bearer ${ApiService.token}');
-
-      xhr.onLoad.listen((_) {
-        if (xhr.status == 200) {
-          try {
-            final data = jsonDecode(xhr.responseText!) as Map<String, dynamic>;
-            if (data['success'] == true) {
-              _shareImageUrl = data['url'] as String;
-              _uploading = false;
-              if (mounted) setState(() {});
-              completer.complete();
-              return;
-            }
-          } catch (_) {}
-        }
-        _uploadError = '上传图片失败';
-        _uploading = false;
-        if (mounted) setState(() {});
-        completer.complete();
-      });
-
-      xhr.onError.listen((_) {
-        _uploadError = '网络错误';
-        _uploading = false;
-        if (mounted) setState(() {});
-        completer.complete();
-      });
-
-      xhr.send(jsonEncode({'image_data': base64Data}));
-      await completer.future;
+      final url = await ApiService.uploadShareImage(widget.imageBytes);
+      _shareImageUrl = url;
+      _uploading = false;
+      if (mounted) setState(() {});
     } catch (e) {
-      if (mounted) {
-        _uploadError = e.toString();
-        _uploading = false;
-        setState(() {});
-      }
+      _uploadError = '上传图片失败';
+      _uploading = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -125,7 +87,7 @@ class _ShareSheetState extends State<ShareSheet> {
           if (_uploading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 40),
-              child: CircularProgressIndicator(color: Color(0xFF7C4DFF)),
+              child: CircularProgressIndicator(color: AppColors.primary),
             )
           else if (_uploadError != null)
             Padding(
@@ -133,18 +95,18 @@ class _ShareSheetState extends State<ShareSheet> {
               child: Column(children: [
                 Text(_uploadError!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
                 const SizedBox(height: 12),
-                _Option(icon: Icons.download_rounded, label: '保存', color: const Color(0xFF7C4DFF), onTap: () => _save(context)),
+                _Option(icon: Icons.download_rounded, label: '保存', color: AppColors.primary, onTap: () => _save(context)),
               ]),
             )
           else
             Wrap(spacing: 16, runSpacing: 16, children: [
               if (inWechat) ...[
-                _Option(icon: Icons.chat_rounded, label: '微信朋友', color: const Color(0xFF07C160), onTap: () => _shareToFriend(context)),
-                _Option(icon: Icons.circle_rounded, label: '朋友圈', color: const Color(0xFF2196F3), onTap: () => _shareToTimeline(context)),
+                _Option(icon: Icons.chat_rounded, label: '微信朋友', color: AppColors.wechatGreen, onTap: () => _shareToFriend(context)),
+                _Option(icon: Icons.circle_rounded, label: '朋友圈', color: AppColors.shareBlue, onTap: () => _shareToTimeline(context)),
               ],
-              _Option(icon: Icons.qr_code_rounded, label: '二维码', color: const Color(0xFFFF8F00), onTap: () => _showQrCode(context)),
-              _Option(icon: Icons.email_rounded, label: '邮件', color: const Color(0xFFEA4335), onTap: () => _emailShare(context)),
-              _Option(icon: Icons.download_rounded, label: '保存', color: const Color(0xFF7C4DFF), onTap: () => _save(context)),
+              _Option(icon: Icons.qr_code_rounded, label: '二维码', color: AppColors.gold, onTap: () => _showQrCode(context)),
+              _Option(icon: Icons.email_rounded, label: '邮件', color: AppColors.emailRed, onTap: () => _emailShare(context)),
+              _Option(icon: Icons.download_rounded, label: '保存', color: AppColors.primary, onTap: () => _save(context)),
             ]),
           const SizedBox(height: 12),
         ]),
@@ -161,7 +123,7 @@ class _ShareSheetState extends State<ShareSheet> {
     );
     Navigator.pop(context);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已配置微信分享，点击右上角菜单分享'), backgroundColor: Color(0xFF4CAF50)));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已配置微信分享，点击右上角菜单分享'), backgroundColor: AppColors.success));
     }
   }
 
@@ -174,7 +136,7 @@ class _ShareSheetState extends State<ShareSheet> {
     );
     Navigator.pop(context);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已配置朋友圈分享，点击右上角菜单分享'), backgroundColor: Color(0xFF4CAF50)));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已配置朋友圈分享，点击右上角菜单分享'), backgroundColor: AppColors.success));
     }
   }
 
@@ -183,7 +145,7 @@ class _ShareSheetState extends State<ShareSheet> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E36),
+        backgroundColor: AppColors.surfaceVariant,
         title: const Text('扫码查看', style: TextStyle(color: Colors.white70, fontSize: 16)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           if (_shareViewUrl.isNotEmpty)
@@ -191,7 +153,7 @@ class _ShareSheetState extends State<ShareSheet> {
               width: 200, height: 200,
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
               padding: const EdgeInsets.all(8),
-              child: QrImageView(data: _shareViewUrl, version: QrVersions.auto, eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF1A1A2E))),
+              child: QrImageView(data: _shareViewUrl, version: QrVersions.auto, eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.surface)),
             ),
           const SizedBox(height: 12),
           Text(_shareViewUrl, style: const TextStyle(fontSize: 11, color: Colors.white38), textAlign: TextAlign.center),
@@ -209,7 +171,7 @@ class _ShareSheetState extends State<ShareSheet> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E36),
+        backgroundColor: AppColors.surfaceVariant,
         title: const Text('发送邮件', style: TextStyle(color: Colors.white70, fontSize: 16)),
         content: TextField(
           controller: emailCtrl,
@@ -234,7 +196,7 @@ class _ShareSheetState extends State<ShareSheet> {
               );
               if (result['success'] == true) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('邮件已发送'), backgroundColor: Color(0xFF4CAF50)));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('邮件已发送'), backgroundColor: AppColors.success));
                 }
               } else if (result['fallback'] == 'mailto') {
                 EmailShareService.openMailtoFallback(email: email, subject: '有人给你寄了一张明信片', shareUrl: _shareViewUrl);
@@ -244,7 +206,7 @@ class _ShareSheetState extends State<ShareSheet> {
                 }
               }
             },
-            child: const Text('发送', style: TextStyle(color: Color(0xFF7C4DFF))),
+            child: const Text('发送', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -254,7 +216,7 @@ class _ShareSheetState extends State<ShareSheet> {
   void _save(BuildContext context) {
     downloadBytes(widget.imageBytes, widget.filename);
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已保存到设备'), backgroundColor: Color(0xFF4CAF50)));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已保存到设备'), backgroundColor: AppColors.success));
   }
 }
 

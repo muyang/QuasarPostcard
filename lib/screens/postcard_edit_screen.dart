@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../models/postcard.dart';
 import '../services/api_service.dart';
 import '../widgets/postcard_canvas.dart';
@@ -93,6 +94,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
         'from_name': _design.fromName,
         'message': _design.message,
         'stamp_id': _design.stampId,
+        'custom_stamp_image_url': _design.customStampImageUrl,
         'postmark_id': _design.postmarkId,
         'image_url': _design.imageUrl,
         'status': _design.status,
@@ -103,7 +105,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
         await ApiService.updatePostcard(_design.id, body);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存成功'), backgroundColor: Color(0xFF4CAF50)));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存成功'), backgroundColor: AppColors.success));
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -136,7 +138,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
       if (bytes == null || !mounted) return;
       await downloadBytes(bytes, 'postcard_${DateTime.now().millisecondsSinceEpoch}.png');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下载完成'), backgroundColor: Color(0xFF4CAF50)));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下载完成'), backgroundColor: AppColors.success));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('下载失败: $e'), backgroundColor: Colors.redAccent));
@@ -151,10 +153,10 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
       child: _sending
           ? Container(
               key: const ValueKey('sending'),
-              color: const Color(0xFF121212),
+              color: AppColors.scaffoldBackground,
               child: Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.send_rounded, size: 64, color: const Color(0xFF7C4DFF).withOpacity(0.6)),
+                  Icon(Icons.send_rounded, size: 64, color: AppColors.primary.withOpacity(0.6)),
                   const SizedBox(height: 16),
                   const Text('明信片已寄出', style: TextStyle(fontSize: 18, color: Colors.white70)),
                 ]),
@@ -191,9 +193,9 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D1A),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D0D1A),
+        backgroundColor: AppColors.background,
         title: const Text('明信片设计器', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
         actions: [
           IconButton(icon: _downloading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)) : const Icon(Icons.share_rounded, color: Colors.white70), tooltip: '分享', onPressed: _downloading ? null : _sharePostcard),
@@ -201,8 +203,8 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))
-                : const Text('保存', style: TextStyle(color: Color(0xFF7C4DFF), fontWeight: FontWeight.w600)),
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                : const Text('保存', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -221,7 +223,7 @@ class _PostcardEditScreenState extends State<PostcardEditScreen> with SingleTick
           if (isWide) {
             return Row(children: [
               Expanded(flex: 6, child: canvas),
-              Container(width: 1, color: const Color(0xFF1E1E36)),
+              Container(width: 1, color: AppColors.surfaceVariant),
               Expanded(flex: 4, child: panel),
             ]);
           }

@@ -46,6 +46,38 @@ function getGradientColors(tpl) {
   return colors;
 }
 
+
+// Compute touchable bounds for text fields on the canvas.
+// Returns array of {key, name, x, y, w, h} in canvas pixels.
+function getFieldBounds(tpl, canvasW, canvasH) {
+  var scaleX = canvasW / 375;
+  var scaleY = canvasH / 243;
+  var fields = [
+    {
+      key: 'to_name', name: '收件人',
+      x: (tpl.to_x !== undefined ? tpl.to_x : 60) / 100 * canvasW,
+      y: (tpl.to_y !== undefined ? tpl.to_y : 88) / 100 * canvasH,
+      w: (tpl.to_w !== undefined ? tpl.to_w : 120) * scaleX,
+      h: (tpl.to_h !== undefined ? tpl.to_h : 28) * scaleY,
+    },
+    {
+      key: 'from_name', name: '寄件人',
+      x: (tpl.from_x !== undefined ? tpl.from_x : 18) / 100 * canvasW,
+      y: (tpl.from_y !== undefined ? tpl.from_y : 88) / 100 * canvasH,
+      w: (tpl.from_w !== undefined ? tpl.from_w : 120) * scaleX,
+      h: (tpl.from_h !== undefined ? tpl.from_h : 28) * scaleY,
+    },
+    {
+      key: 'message', name: '祝福语',
+      x: (tpl.message_x !== undefined ? tpl.message_x : 8) / 100 * canvasW,
+      y: (tpl.message_y !== undefined ? tpl.message_y : 40) / 100 * canvasH,
+      w: (tpl.message_w !== undefined ? tpl.message_w : 82) * scaleX,
+      h: (tpl.message_h !== undefined ? tpl.message_h : 70) * scaleY,
+    },
+  ];
+  return fields;
+}
+
 module.exports = {
   CANVAS_W,
   CANVAS_H,
@@ -56,4 +88,5 @@ module.exports = {
   getDpr,
   parseColor,
   getGradientColors,
+  getFieldBounds,
 };

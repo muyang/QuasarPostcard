@@ -13,6 +13,7 @@ from api.materials import router as materials_router
 from api.wechat import router as wechat_router
 from api.share import router as share_router
 from admin_page import router as admin_page_router
+from api.ai import router as ai_router
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -123,6 +124,7 @@ app.include_router(materials_router)
 app.include_router(wechat_router)
 app.include_router(share_router)
 app.include_router(admin_page_router)
+app.include_router(ai_router)
 
 class ImageCORSHandler(BaseHTTPMiddleware):
     """Ensure all responses (including static files) have CORS headers for CanvasKit image loading."""

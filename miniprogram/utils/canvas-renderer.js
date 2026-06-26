@@ -33,20 +33,20 @@ function parseTemplate(tpl) {
     fromSize: toNum(tpl.from_size, 14),
     toSize: toNum(tpl.to_size, 14),
     messageSize: toNum(tpl.message_size, 13),
-    fromX: toNum(tpl.from_x, 10),
-    fromY: toNum(tpl.from_y, 82),
-    toX: toNum(tpl.to_x, 55),
-    toY: toNum(tpl.to_y, 82),
-    messageX: toNum(tpl.message_x, 10),
-    messageY: toNum(tpl.message_y, 60),
-    messageW: toNum(tpl.message_w, 80),
-    messageH: toNum(tpl.message_h, 80),
-    stampX: toNum(tpl.stamp_x, 78),
-    stampY: toNum(tpl.stamp_y, 5),
+    fromX: toNum(tpl.from_x, 18),
+    fromY: toNum(tpl.from_y, 88),
+    toX: toNum(tpl.to_x, 60),
+    toY: toNum(tpl.to_y, 88),
+    messageX: toNum(tpl.message_x, 8),
+    messageY: toNum(tpl.message_y, 40),
+    messageW: toNum(tpl.message_w, 82),
+    messageH: toNum(tpl.message_h, 70),
+    stampX: toNum(tpl.stamp_x, 85),
+    stampY: toNum(tpl.stamp_y, 14),
     stampRotation: toNum(tpl.stamp_rotation, 0),
     stampScale: toNum(tpl.stamp_scale, 100),
-    postmarkX: toNum(tpl.postmark_x, 45),
-    postmarkY: toNum(tpl.postmark_y, 45),
+    postmarkX: toNum(tpl.postmark_x, 50),
+    postmarkY: toNum(tpl.postmark_y, 50),
     postmarkRotation: toNum(tpl.postmark_rotation, 0),
     postmarkScale: toNum(tpl.postmark_scale, 100),
     fromW: toNum(tpl.from_w, 120),
@@ -75,22 +75,18 @@ function preloadImages(tpl, stamp, postmark, imgSize) {
   }));
 }
 
-function drawPostcard(canvas, design, opts) {
-  if (!canvas) return Promise.resolve();
+async function drawPostcard(canvas, design, opts) {
+  if (!canvas) return;
 
   var scale, imgSize, isExport;
   if (typeof opts === 'number') {
-    scale = opts;
-    imgSize = 'small';
-    isExport = false;
+    scale = opts; imgSize = 'small'; isExport = false;
   } else if (opts && typeof opts === 'object') {
     scale = opts.scale || constants.getDpr();
     imgSize = opts.imgSize !== undefined ? opts.imgSize : 'small';
     isExport = opts.isExport || false;
   } else {
-    scale = constants.getDpr();
-    imgSize = 'small';
-    isExport = false;
+    scale = constants.getDpr(); imgSize = 'small'; isExport = false;
   }
 
   var ctx = canvas.getContext('2d');
@@ -109,35 +105,32 @@ function drawPostcard(canvas, design, opts) {
   var fromName = design.fromName || '';
   var message = design.message || '';
 
-  return preloadImages(tpl, stamp, postmark, imgSize).then(function() {
-    ctx.clearRect(0, 0, w, h);
-    drawGradient(ctx, tpl, w, h);
-    return drawBackgroundImage(ctx, canvas, tpl, w, h, imgSize);
-  }).then(function() {
-    drawDecoration(ctx, tpl, w, h);
-    return drawStampElement(ctx, canvas, tpl, stamp, w, h, imgSize);
-  }).then(function() {
-    return drawPostmarkElement(ctx, canvas, tpl, postmark, w, h, imgSize);
-  }).then(function() {
-    // Use custom text styles if provided in design
-    var fromColor = design.fromColor || tpl.fromColor;
-    var fromFont = design.fromFont || tpl.fromFont;
-    var fromSize = design.fromSize !== undefined ? design.fromSize : tpl.fromSize;
-    var toColor = design.toColor || tpl.toColor;
-    var toFont = design.toFont || tpl.toFont;
-    var toSize = design.toSize !== undefined ? design.toSize : tpl.toSize;
-    var messageColor = design.messageColor || tpl.messageColor;
-    var messageFont = design.messageFont || tpl.messageFont;
-    var messageSize = design.messageSize !== undefined ? design.messageSize : tpl.messageSize;
+  await preloadImages(tpl, stamp, postmark, imgSize);
+  ctx.clearRect(0, 0, w, h);
+  drawGradient(ctx, tpl, w, h);
+  await drawBackgroundImage(ctx, canvas, tpl, w, h, imgSize);
+  drawDecoration(ctx, tpl, w, h);
+  await drawStampElement(ctx, canvas, tpl, stamp, w, h, imgSize);
+  await drawPostmarkElement(ctx, canvas, tpl, postmark, w, h, imgSize);
 
-    drawTextField(ctx, '寄件人', fromName, fromColor, fromFont, fromSize,
-      tpl.fromX, tpl.fromY, tpl.fromW, tpl.fromH,
-      tpl.fromBorderColor, tpl.fromBorderWidth, tpl.fromBgColor, tpl.fromBgOpacity, w, h, isExport);
-    drawTextField(ctx, '收件人', toName, toColor, toFont, toSize,
-      tpl.toX, tpl.toY, tpl.toW, tpl.toH,
-      tpl.toBorderColor, tpl.toBorderWidth, tpl.toBgColor, tpl.toBgOpacity, w, h, isExport);
-    drawMessage(ctx, message, tpl, w, h, messageColor, messageFont, messageSize, isExport);
-  });
+  // Use custom text styles if provided in design
+  var fromColor = design.fromColor || tpl.fromColor;
+  var fromFont = design.fromFont || tpl.fromFont;
+  var fromSize = design.fromSize !== undefined ? design.fromSize : tpl.fromSize;
+  var toColor = design.toColor || tpl.toColor;
+  var toFont = design.toFont || tpl.toFont;
+  var toSize = design.toSize !== undefined ? design.toSize : tpl.toSize;
+  var messageColor = design.messageColor || tpl.messageColor;
+  var messageFont = design.messageFont || tpl.messageFont;
+  var messageSize = design.messageSize !== undefined ? design.messageSize : tpl.messageSize;
+
+  drawTextField(ctx, '寄件人', fromName, fromColor, fromFont, fromSize,
+    tpl.fromX, tpl.fromY, tpl.fromW, tpl.fromH,
+    tpl.fromBorderColor, tpl.fromBorderWidth, tpl.fromBgColor, tpl.fromBgOpacity, w, h, isExport);
+  drawTextField(ctx, '收件人', toName, toColor, toFont, toSize,
+    tpl.toX, tpl.toY, tpl.toW, tpl.toH,
+    tpl.toBorderColor, tpl.toBorderWidth, tpl.toBgColor, tpl.toBgOpacity, w, h, isExport);
+  drawMessage(ctx, message, tpl, w, h, messageColor, messageFont, messageSize, isExport);
 }
 
 // Layer 2: Gradient background
@@ -356,7 +349,7 @@ function drawDefaultPostmark(ctx, cx, cy, size, postmark, rotRad) {
   ctx.rotate(rotRad);
 
   // Outer circle
-  ctx.strokeStyle = color.replace(')', ',0.7)').replace('rgb(', 'rgba(');
+  ctx.strokeStyle = withAlpha(color, 0.7);
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -369,7 +362,7 @@ function drawDefaultPostmark(ctx, cx, cy, size, postmark, rotRad) {
   ctx.stroke();
 
   // Tick marks
-  ctx.strokeStyle = color.replace(')', ',0.5)').replace('rgb(', 'rgba(');
+  ctx.strokeStyle = withAlpha(color, 0.5);
   ctx.lineWidth = 0.8;
   for (var i = 0; i < 24; i++) {
     var angle = i * (Math.PI * 2 / 24);
@@ -382,7 +375,7 @@ function drawDefaultPostmark(ctx, cx, cy, size, postmark, rotRad) {
   }
 
   // Date text
-  ctx.fillStyle = color.replace(')', ',0.8)').replace('rgb(', 'rgba(');
+  ctx.fillStyle = withAlpha(color, 0.8);
   ctx.font = '600 9px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -616,11 +609,10 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 function withAlpha(colorStr, alpha) {
-  if (colorStr.indexOf('rgba') === 0) {
-    return colorStr.replace(/,[^,]+\)$/, ',' + alpha + ')');
-  }
-  if (colorStr.indexOf('rgb') === 0) {
-    return colorStr.replace('rgb(', 'rgba(').replace(')', ',' + alpha + ')');
+  // Parse any rgb/rgba string into r,g,b components, then re-emit as rgba
+  var m = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (m) {
+    return 'rgba(' + m[1] + ',' + m[2] + ',' + m[3] + ',' + alpha + ')';
   }
   return colorStr;
 }

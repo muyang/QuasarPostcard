@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../services/wechat_auth_service.dart';
 import 'postcard_list_screen.dart';
 
@@ -49,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF0D0D1A), Color(0xFF13132B), Color(0xFF1A1A2E)]),
+          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [AppColors.background, AppColors.panelDark, AppColors.surface]),
         ),
         child: SafeArea(
           child: Center(
@@ -60,13 +61,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Container(
                     width: 88, height: 88,
-                    decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF07C160), Color(0xFF2EBD6F)]), boxShadow: [BoxShadow(color: const Color(0xFF07C160).withOpacity(0.25), blurRadius: 24)]),
+                    decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [AppColors.wechatGreen, AppColors.wechatGreenLight]), boxShadow: [BoxShadow(color: AppColors.wechatGreen.withOpacity(0.25), blurRadius: 24)]),
                     child: const Icon(Icons.mail_rounded, size: 42, color: Colors.white),
                   ),
                   const SizedBox(height: 24),
                   const Text('明信片设计器', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w300, color: Colors.white, letterSpacing: 1)),
                   const SizedBox(height: 8),
-                  const Text('设计属于你的明信片，寄出一份心意', style: TextStyle(fontSize: 13, color: Color(0xFF666688))),
+                  const Text('设计属于你的明信片，寄出一份心意', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
                   const SizedBox(height: 48),
                   if (_error != null) ...[
                     Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.redAccent.withOpacity(0.2))), child: Row(children: [const Icon(Icons.info_outline, size: 16, color: Colors.redAccent), const SizedBox(width: 8), Expanded(child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)))])),
@@ -81,16 +82,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           : const Icon(Icons.wechat, color: Colors.white, size: 24),
                       label: const Text('微信登录', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF07C160),
+                        backgroundColor: AppColors.wechatGreen,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFF1B5E20),
+                        disabledBackgroundColor: AppColors.wechatGreenDark,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('首次登录需要通过微信认证', style: TextStyle(fontSize: 11, color: Color(0xFF444466))),
+                  const Text('首次登录需要通过微信认证', style: TextStyle(fontSize: 11, color: AppColors.textFaint)),
                 ]),
               ),
             ),

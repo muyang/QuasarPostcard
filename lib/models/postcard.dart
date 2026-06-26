@@ -313,6 +313,42 @@ const POSTCARD_POSTMARKS = [
   PostcardPostmark(id: 'vintage_sepia', label: '复古棕', dateText: '2026.05.13', color: Color(0xFF795548)),
 ];
 
+// ======== Material Catalog ========
+
+/// Holds the loaded material lists (templates, stamps, postmarks, group order).
+/// Separated from [PostcardDesign] so the design data stays a pure value object
+/// and material lookups can be shared across multiple designs without copying.
+class MaterialCatalog {
+  List<PostcardTemplate> templates;
+  List<PostcardStamp> stamps;
+  List<PostcardPostmark> postmarks;
+  List<String> groupOrder;
+
+  MaterialCatalog({
+    List<PostcardTemplate>? templates,
+    List<PostcardStamp>? stamps,
+    List<PostcardPostmark>? postmarks,
+    List<String>? groupOrder,
+  })  : templates = templates ?? [],
+        stamps = stamps ?? [],
+        postmarks = postmarks ?? [],
+        groupOrder = groupOrder ?? [];
+
+  void update({
+    List<PostcardTemplate>? templates,
+    List<PostcardStamp>? stamps,
+    List<PostcardPostmark>? postmarks,
+    List<String>? groupOrder,
+  }) {
+    if (templates != null) this.templates = templates;
+    if (stamps != null) this.stamps = stamps;
+    if (postmarks != null) this.postmarks = postmarks;
+    if (groupOrder != null) this.groupOrder = groupOrder;
+  }
+
+  static final empty = MaterialCatalog();
+}
+
 // ======== Postcard Design (runtime state) ========
 
 class PostcardDesign {
@@ -322,32 +358,69 @@ class PostcardDesign {
   String fromName;
   String message;
   String? stampId;
+  String? customStampImageUrl;  // AI-generated anime avatar stamp
   String? postmarkId;
   String? imageUrl;
   int id;
   String status;
 
-  List<PostcardTemplate> _templates = [];
-  List<PostcardStamp> _stamps = [];
-  List<PostcardPostmark> _postmarks = [];
-  List<String> _groupOrder = [];
+  MaterialCatalog _catalog = MaterialCatalog.empty;
 
+  /// Attaches a material catalog so the [template], [stamp], and [postmark]
+  /// getters can resolve IDs to objects.
+  void attachCatalog(MaterialCatalog catalog) {
+    _catalog = catalog;
+  }
+
+  /// Backwards-compatible alias for [attachCatalog].
   void updateMaterials({
     List<PostcardTemplate>? templates,
     List<PostcardStamp>? stamps,
     List<PostcardPostmark>? postmarks,
     List<String>? groupOrder,
   }) {
-    if (templates != null) _templates = templates;
-    if (stamps != null) _stamps = stamps;
-    if (postmarks != null) _postmarks = postmarks;
-    if (groupOrder != null) _groupOrder = groupOrder;
+    _catalog.update(
+      templates: templates,
+      stamps: stamps,
+      postmarks: postmarks,
+      groupOrder: groupOrder,
+    );
   }
 
-  List<PostcardTemplate> get templates => _templates;
-  List<PostcardStamp> get stamps => _stamps;
-  List<PostcardPostmark> get postmarks => _postmarks;
-  List<String> get groupOrder => _groupOrder;
+  List<PostcardTemplate> get templates => _catalog.templates;
+  List<PostcardStamp> get stamps => _catalog.stamps;
+  List<PostcardPostmark> get postmarks => _catalog.postmarks;
+  List<String> get groupOrder => _catalog.groupOrder;
+
+  /// Creates a copy of this design with optional field overrides.
+  /// The material catalog is shared by reference.
+  PostcardDesign copyWith({
+    String? templateId,
+    Color? themeColor,
+    String? toName,
+    String? fromName,
+    String? message,
+    String? stampId,
+    String? customStampImageUrl,
+    String? postmarkId,
+    String? imageUrl,
+    int? id,
+    String? status,
+  }) {
+    return PostcardDesign(
+      templateId: templateId ?? this.templateId,
+      themeColor: themeColor ?? this.themeColor,
+      toName: toName ?? this.toName,
+      fromName: fromName ?? this.fromName,
+      message: message ?? this.message,
+      stampId: stampId ?? this.stampId,
+      customStampImageUrl: customStampImageUrl ?? this.customStampImageUrl,
+      postmarkId: postmarkId ?? this.postmarkId,
+      imageUrl: imageUrl ?? this.imageUrl,
+      id: id ?? this.id,
+      status: status ?? this.status,
+    ).._catalog = _catalog;
+  }
 
   PostcardDesign({
     this.templateId = 'floral',
@@ -356,6 +429,7 @@ class PostcardDesign {
     this.fromName = '',
     this.message = '',
     this.stampId,
+    this.customStampImageUrl,
     this.postmarkId,
     this.imageUrl,
     this.id = 0,
@@ -363,15 +437,18 @@ class PostcardDesign {
   });
 
   PostcardTemplate get template {
-    if (_templates.isEmpty) return PostcardTemplate.empty();
-    return _templates.firstWhere((t) => t.id == templateId, orElse: () => _templates[0]);
+    if (_catalog.templates.isEmpty) return PostcardTemplate.empty();
+    return _catalog.templates.firstWhere((t) => t.id == templateId, orElse: () => _catalog.templates[0]);
   }
 
   PostcardStamp? get stamp =>
-      stampId != null ? _stamps.cast<PostcardStamp?>().firstWhere((s) => s!.id == stampId, orElse: () => null) : null;
+      stampId != null ? _catalog.stamps.cast<PostcardStamp?>().firstWhere((s) => s!.id == stampId, orElse: () => null) : null;
+
+  /// True when a custom AI-generated image should be used as the stamp.
+  bool get hasCustomStamp => customStampImageUrl != null && customStampImageUrl!.isNotEmpty;
 
   PostcardPostmark? get postmark =>
-      postmarkId != null ? _postmarks.cast<PostcardPostmark?>().firstWhere((p) => p!.id == postmarkId, orElse: () => null) : null;
+      postmarkId != null ? _catalog.postmarks.cast<PostcardPostmark?>().firstWhere((p) => p!.id == postmarkId, orElse: () => null) : null;
 
   static const double aspectRatio = 14.0 / 9.0;
   static const double defaultWidth = 420.0;
@@ -384,6 +461,7 @@ class PostcardDesign {
       'toName': toName,
       'fromName': fromName,
       'stampId': stampId,
+      'customStampImageUrl': customStampImageUrl,
       'postmarkId': postmarkId,
     });
   }
@@ -398,6 +476,7 @@ class PostcardDesign {
         toName: m['toName'] ?? '',
         fromName: m['fromName'] ?? '',
         stampId: m['stampId'],
+        customStampImageUrl: m['customStampImageUrl'],
         postmarkId: m['postmarkId'],
       );
     } catch (_) {

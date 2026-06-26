@@ -124,6 +124,19 @@ function imageUrl(path, size) {
   return url;
 }
 
+
+// Resolve display_url for items with image_url
+function resolveUrls(items) {
+  if (!items || !items.length) return items;
+  return items.map(function(item) {
+    if (item.image_url) {
+      item.display_url = item.image_url.indexOf('http') === 0
+        ? item.image_url
+        : imageUrl(item.image_url, 'thumb');
+    }
+    return item;
+  });
+}
 module.exports = {
   setToken: setToken,
   setBaseUrl: setBaseUrl,
@@ -141,4 +154,5 @@ module.exports = {
   getStampGroups: getStampGroups,
   getPostmarkGroups: getPostmarkGroups,
   imageUrl: imageUrl,
+  resolveUrls: resolveUrls,
 };

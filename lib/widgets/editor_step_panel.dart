@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../models/postcard.dart';
-import '../services/api_service.dart';
 import 'app_image.dart';
+import 'anime_avatar_dialog.dart';
 
 enum EditorStep { template, text, stamp, postmark }
 
@@ -29,7 +30,7 @@ class EditorStepPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF13132B),
+      color: AppColors.panelDark,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -38,7 +39,7 @@ class EditorStepPanel extends StatelessWidget {
             child: _buildStepIndicator(),
           ),
           const SizedBox(height: 8),
-          Container(height: 1, color: const Color(0xFF1E1E3A)),
+          Container(height: 1, color: AppColors.divider),
           Expanded(
             child: IndexedStack(
               index: currentStep.index,
@@ -56,19 +57,7 @@ class EditorStepPanel extends StatelessWidget {
   }
 
   void _update(void Function(PostcardDesign d) fn) {
-    final d = PostcardDesign(
-      templateId: design.templateId,
-      themeColor: design.themeColor,
-      toName: design.toName,
-      fromName: design.fromName,
-      message: design.message,
-      stampId: design.stampId,
-      postmarkId: design.postmarkId,
-      imageUrl: design.imageUrl,
-      id: design.id,
-      status: design.status,
-    );
-    d.updateMaterials(templates: design.templates, stamps: design.stamps, postmarks: design.postmarks, groupOrder: design.groupOrder);
+    final d = design.copyWith();
     fn(d);
     onDesignChanged(d);
   }
@@ -91,13 +80,13 @@ class EditorStepPanel extends StatelessWidget {
                 height: current ? 38 : 30,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: current ? const Color(0xFF7C4DFF) : active ? const Color(0xFF7C4DFF).withOpacity(0.25) : const Color(0xFF1E1E3A),
-                  border: Border.all(color: current ? const Color(0xFF9B7BFF) : active ? const Color(0xFF7C4DFF).withOpacity(0.4) : const Color(0xFF2A2A4A), width: 1.5),
+                  color: current ? AppColors.primary : active ? AppColors.primary.withOpacity(0.25) : AppColors.divider,
+                  border: Border.all(color: current ? AppColors.primaryLight : active ? AppColors.primary.withOpacity(0.4) : AppColors.inputFill, width: 1.5),
                 ),
                 child: Icon(_stepIcons[i], size: current ? 19 : 15, color: current ? Colors.white : Colors.white38),
               ),
               const SizedBox(height: 4),
-              Text(_stepLabels[i], style: TextStyle(fontSize: 10, color: current ? const Color(0xFF7C4DFF) : Colors.white30, fontWeight: current ? FontWeight.w600 : FontWeight.normal)),
+              Text(_stepLabels[i], style: TextStyle(fontSize: 10, color: current ? AppColors.primary : Colors.white30, fontWeight: current ? FontWeight.w600 : FontWeight.normal)),
             ]),
           ),
         );
@@ -218,8 +207,8 @@ class _TemplateStepState extends State<_TemplateStep> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      color: active ? const Color(0xFF7C4DFF) : Colors.transparent,
-                      border: Border.all(color: active ? const Color(0xFF7C4DFF) : Colors.white24),
+                      color: active ? AppColors.primary : Colors.transparent,
+                      border: Border.all(color: active ? AppColors.primary : Colors.white24),
                     ),
                     child: Text(
                       g,
@@ -239,7 +228,7 @@ class _TemplateStepState extends State<_TemplateStep> {
         if (widget.loading && widget.design.templates.isEmpty)
           const SizedBox(
             height: 56,
-            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))),
+            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))),
           )
         else
           SizedBox(
@@ -259,8 +248,8 @@ class _TemplateStepState extends State<_TemplateStep> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       gradient: LinearGradient(colors: t.gradientColors),
-                      border: Border.all(color: sel ? const Color(0xFF7C4DFF) : Colors.white10, width: sel ? 2 : 1),
-                      boxShadow: sel ? [BoxShadow(color: const Color(0xFF7C4DFF).withOpacity(0.25), blurRadius: 8)] : null,
+                      border: Border.all(color: sel ? AppColors.primary : Colors.white10, width: sel ? 2 : 1),
+                      boxShadow: sel ? [BoxShadow(color: AppColors.primary.withOpacity(0.25), blurRadius: 8)] : null,
                     ),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                       if (t.imageUrl != null && t.imageUrl!.isNotEmpty)
@@ -371,14 +360,48 @@ class _StampStep extends StatelessWidget {
         Row(children: [
           const Text('选择邮票', style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500)),
           const Spacer(),
-          if (design.stampId != null)
-            TextButton(onPressed: () => onUpdate((d) { d.stampId = null; }), child: const Text('移除', style: TextStyle(fontSize: 12, color: Colors.white38))),
+          if (design.stampId != null || design.hasCustomStamp)
+            TextButton(onPressed: () => onUpdate((d) { d.stampId = null; d.customStampImageUrl = null; }), child: const Text('移除', style: TextStyle(fontSize: 12, color: Colors.white38))),
         ]),
+        const SizedBox(height: 10),
+        // AI anime avatar button
+        if (design.hasCustomStamp)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.15), borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.primary.withOpacity(0.3))),
+            child: Row(children: [
+              const Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              const Expanded(child: Text('AI 动漫头像已生成', style: TextStyle(fontSize: 12, color: AppColors.primary))),
+              TextButton(onPressed: () async {
+                final url = await AnimeAvatarDialog.show(context);
+                if (url != null) onUpdate((d) { d.customStampImageUrl = url; d.stampId = null; });
+              }, child: const Text('重新生成', style: TextStyle(fontSize: 11, color: AppColors.primary))),
+            ]),
+          )
+        else
+          GestureDetector(
+            onTap: () async {
+              final url = await AnimeAvatarDialog.show(context);
+              if (url != null) onUpdate((d) { d.customStampImageUrl = url; d.stampId = null; });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(border: Border.all(color: AppColors.primary.withOpacity(0.4), width: 1, strokeAlign: BorderSide.strokeAlignOutside), borderRadius: BorderRadius.circular(10)),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                const SizedBox(width: 6),
+                const Text('AI 动漫头像', style: TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                const SizedBox(width: 6),
+                const Text('上传照片生成动漫邮票', style: TextStyle(fontSize: 11, color: Colors.white30)),
+              ]),
+            ),
+          ),
         const SizedBox(height: 10),
         if (loading && design.stamps.isEmpty)
           const SizedBox(
             height: 136,
-            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))),
+            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))),
           )
         else
           SizedBox(
@@ -395,7 +418,7 @@ class _StampStep extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E36), borderRadius: BorderRadius.circular(12),
+                      color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: sel ? s.accentColor : Colors.white10, width: sel ? 2 : 1),
                       boxShadow: sel ? [BoxShadow(color: s.accentColor.withOpacity(0.25), blurRadius: 8)] : null,
                     ),
@@ -447,7 +470,7 @@ class _PostmarkStep extends StatelessWidget {
         if (loading && design.postmarks.isEmpty)
           const SizedBox(
             height: 60,
-            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF)))),
+            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))),
           )
         else
           SizedBox(
@@ -465,7 +488,7 @@ class _PostmarkStep extends StatelessWidget {
                     duration: const Duration(milliseconds: 200),
                     width: 76,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E36), borderRadius: BorderRadius.circular(12),
+                      color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: sel ? p.color : Colors.white10, width: sel ? 2 : 1),
                     ),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -492,9 +515,9 @@ class _PostmarkStep extends StatelessWidget {
               icon: const Icon(Icons.send_rounded, size: 18),
               label: Text(_canSend ? '发送明信片' : '请选择邮票和邮戳'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7C4DFF),
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFF2A2A4A),
+                disabledBackgroundColor: AppColors.inputFill,
                 disabledForegroundColor: Colors.white38,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -513,7 +536,7 @@ class _PostmarkStep extends StatelessWidget {
 Widget _nextBtn(VoidCallback onTap) {
   return ElevatedButton(
     onPressed: onTap,
-    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C4DFF), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10)),
+    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10)),
     child: const Text('下一步', style: TextStyle(fontWeight: FontWeight.w500)),
   );
 }
@@ -521,7 +544,7 @@ Widget _nextBtn(VoidCallback onTap) {
 Widget _prevBtn(VoidCallback onTap) {
   return OutlinedButton(
     onPressed: onTap,
-    style: OutlinedButton.styleFrom(foregroundColor: Colors.white54, side: const BorderSide(color: Color(0xFF333355)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10)),
+    style: OutlinedButton.styleFrom(foregroundColor: Colors.white54, side: const BorderSide(color: AppColors.outline), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10)),
     child: const Text('上一步'),
   );
 }

@@ -2,6 +2,42 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
+/// Simple in-memory cache for fetched image bytes, keyed by URL.
+/// Prevents redundant network requests when the same image is loaded
+/// by multiple AppImage widgets (e.g., in list views).
+class _ImageCache {
+  static final _cache = <String, Uint8List?>{};
+  static final _pending = <String, Future<Uint8List?>>{};
+
+  static const _maxEntries = 200;
+
+  static Future<Uint8List?> load(String src) {
+    if (_cache.containsKey(src)) return Future.value(_cache[src]);
+
+    // Deduplicate concurrent requests for the same URL
+    final pending = _pending[src];
+    if (pending != null) return pending;
+
+    final f = ApiService.fetchImageBytes(src).then((bytes) {
+      _cache[src] = bytes;
+      _pending.remove(src);
+      _evictIfNeeded();
+      return bytes;
+    }).catchError((e) {
+      _pending.remove(src);
+      return null;
+    });
+    _pending[src] = f;
+    return f;
+  }
+
+  static void _evictIfNeeded() {
+    if (_cache.length > _maxEntries) {
+      _cache.remove(_cache.keys.first);
+    }
+  }
+}
+
 class AppImage extends StatelessWidget {
   final String? url;
   final double? width;
@@ -29,7 +65,6 @@ class AppImage extends StatelessWidget {
       return errorWidget?.call() ?? const SizedBox.shrink();
     }
 
-    // Always use memory-based loading to avoid CanvasKit crossOrigin issues on mobile
     return _MemoryImage(src: src, width: width, height: height, fit: fit, placeholder: placeholder, errorWidget: errorWidget);
   }
 }
@@ -54,14 +89,14 @@ class _MemoryImageState extends State<_MemoryImage> {
   @override
   void initState() {
     super.initState();
-    _future = ApiService.fetchImageBytes(widget.src);
+    _future = _ImageCache.load(widget.src);
   }
 
   @override
   void didUpdateWidget(covariant _MemoryImage old) {
     super.didUpdateWidget(old);
     if (old.src != widget.src) {
-      _future = ApiService.fetchImageBytes(widget.src);
+      _future = _ImageCache.load(widget.src);
     }
   }
 

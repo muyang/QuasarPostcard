@@ -1,18 +1,6 @@
 var api = require('../../utils/api');
 var auth = require('../../utils/auth');
 
-function resolveUrls(items) {
-  if (!items || !items.length) return items;
-  return items.map(function(item) {
-    if (item.image_url) {
-      item.display_url = item.image_url.indexOf('http') === 0
-        ? item.image_url
-        : api.imageUrl(item.image_url, 'thumb');
-    }
-    return item;
-  });
-}
-
 Page({
   data: {
     postcards: [],
@@ -80,7 +68,7 @@ Page({
     var tplPromise = app.globalData.templates && app.globalData.templates.length > 0
       ? Promise.resolve(app.globalData.templates)
       : api.getTemplates().then(function(items) {
-          var resolved = resolveUrls(items);
+          var resolved = api.resolveUrls(items);
           app.globalData.templates = resolved;
           return resolved;
         });

@@ -1,0 +1,61 @@
+# Multi-GPU deployment: 2 workers (one per 3090) + Nginx load balancer
+services:
+  worker-0:
+    build: .
+    container_name: anime-worker-0
+    environment:
+      - GPU_ID=0
+      - CUDA_VISIBLE_DEVICES=0
+      - EAGER_LOAD=1
+      # Override these to use different models
+      - SD_BASE_MODEL=runwayml/stable-diffusion-v1-5
+      - CONTROLNET_MODEL=lllyasviel/control_v11f1p_sd15_depth
+      - LORA_PATH=
+      - LORA_SCALE=0.8
+    volumes:
+      - model-cache:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  worker-1:
+    build: .
+    container_name: anime-worker-1
+    environment:
+      - GPU_ID=1
+      - CUDA_VISIBLE_DEVICES=1
+      - EAGER_LOAD=1
+      - SD_BASE_MODEL=runwayml/stable-diffusion-v1-5
+      - CONTROLNET_MODEL=lllyasviel/control_v11f1p_sd15_depth
+      - LORA_PATH=
+      - LORA_SCALE=0.8
+    volumes:
+      - model-cache:/app/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["1"]
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: anime-lb
+    ports:
+      - "8200:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - worker-0
+      - worker-1
+    restart: unless-stopped
+
+volumes:
+  model-cache:
