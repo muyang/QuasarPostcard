@@ -7,13 +7,14 @@ services:
       - GPU_ID=0
       - CUDA_VISIBLE_DEVICES=0
       - EAGER_LOAD=1
-      # Override these to use different models
       - SD_BASE_MODEL=runwayml/stable-diffusion-v1-5
       - CONTROLNET_MODEL=lllyasviel/control_v11f1p_sd15_depth
       - LORA_PATH=
       - LORA_SCALE=0.8
     volumes:
       - model-cache:/app/models
+    ports:
+      - "8001:8000"   # Direct access for debugging
     deploy:
       resources:
         reservations:
@@ -36,6 +37,8 @@ services:
       - LORA_SCALE=0.8
     volumes:
       - model-cache:/app/models
+    ports:
+      - "8002:8000"   # Direct access for debugging
     deploy:
       resources:
         reservations:

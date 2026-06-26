@@ -2,12 +2,15 @@
 
 Each worker loads one pipeline pinned to a single GPU.
 Deploy two workers (one per GPU) behind Nginx for load balancing.
+
+Model loading happens in a background thread so the server starts
+immediately and the health check passes during model download.
 """
 import base64
 import io
 import os
+import threading
 import time
-import uuid
 
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -16,19 +19,53 @@ from PIL import Image
 from pipeline import AnimePipeline
 from face_utils import process_image
 
+_gpu_id = int(os.environ.get("GPU_ID", "0"))
+
 app = FastAPI(title="Anime Face API", version="1.0.0")
 
-# Load pipeline at startup (pinned to GPU via CUDA_VISIBLE_DEVICES env)
-_gpu_id = int(os.environ.get("GPU_ID", "0"))
+# Pipeline state — loaded in background thread
 _pipeline: AnimePipeline | None = None
+_pipeline_lock = threading.Lock()
+_pipeline_status = "idle"  # idle -> loading -> ready / error
+_pipeline_error: str | None = None
 
 
-def get_pipeline() -> AnimePipeline:
+def _load_pipeline_async():
+    """Load the SD pipeline in a background thread."""
+    global _pipeline, _pipeline_status, _pipeline_error
+    with _pipeline_lock:
+        if _pipeline_status == "loading":
+            return
+        _pipeline_status = "loading"
+    try:
+        print(f"[app] loading pipeline on GPU {_gpu_id}...", flush=True)
+        pipe = AnimePipeline(gpu_id=_gpu_id)
+        with _pipeline_lock:
+            _pipeline = pipe
+            _pipeline_status = "ready"
+            _pipeline_error = None
+        print("[app] pipeline ready", flush=True)
+    except Exception as e:
+        with _pipeline_lock:
+            _pipeline_status = "error"
+            _pipeline_error = str(e)
+        print(f"[app] pipeline load failed: {e}", flush=True)
+
+
+def get_pipeline() -> AnimePipeline | None:
     global _pipeline
-    if _pipeline is None:
-        print(f"[app] loading pipeline on GPU {_gpu_id}...")
-        _pipeline = AnimePipeline(gpu_id=_gpu_id)
-    return _pipeline
+    with _pipeline_lock:
+        if _pipeline is None and _pipeline_status == "idle":
+            _load_pipeline_async()
+        return _pipeline
+
+
+# ---------- Startup ----------
+
+@app.on_event("startup")
+def _startup():
+    if os.environ.get("EAGER_LOAD", "1") == "1":
+        threading.Thread(target=_load_pipeline_async, daemon=True).start()
 
 
 # ---------- Schemas ----------
@@ -54,12 +91,46 @@ class AnimeResponse(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "gpu_id": _gpu_id, "pipeline_loaded": _pipeline is not None}
+    """Always returns 200 — the server is alive even while models load."""
+    return {
+        "status": "ok",
+        "gpu_id": _gpu_id,
+        "pipeline_status": _pipeline_status,
+        "pipeline_error": _pipeline_error,
+    }
+
+
+@app.get("/ready")
+def ready():
+    """Returns 200 only when the pipeline is loaded and ready for inference."""
+    if _pipeline_status != "ready":
+        from fastapi import HTTPException
+        raise HTTPException(503, f"pipeline not ready (status={_pipeline_status})")
+    return {"status": "ready"}
 
 
 @app.post("/api/anime-face", response_model=AnimeResponse)
 def anime_face(req: AnimeRequest):
     t0 = time.time()
+
+    # Check if pipeline is ready
+    with _pipeline_lock:
+        if _pipeline_status == "loading":
+            return AnimeResponse(
+                success=False,
+                error="模型正在加载中，请稍后重试",
+                elapsed_ms=int((time.time() - t0) * 1000),
+            )
+        if _pipeline_status == "error":
+            return AnimeResponse(success=False, error=_pipeline_error or "模型加载失败", elapsed_ms=0)
+        if _pipeline is None:
+            _load_pipeline_async()
+            return AnimeResponse(
+                success=False,
+                error="模型正在加载中，请稍后重试",
+                elapsed_ms=int((time.time() - t0) * 1000),
+            )
+
     try:
         # Decode base64 -> PIL
         raw = base64.b64decode(req.image_base64)
@@ -69,8 +140,7 @@ def anime_face(req: AnimeRequest):
         _, depth_map = process_image(image, target_size=512)
 
         # Generate anime portrait
-        pipe = get_pipeline()
-        result = pipe.generate(
+        result = _pipeline.generate(
             image=depth_map,
             prompt=req.prompt,
             negative_prompt=req.negative_prompt,
@@ -91,8 +161,3 @@ def anime_face(req: AnimeRequest):
     except Exception as e:
         elapsed = int((time.time() - t0) * 1000)
         return AnimeResponse(success=False, error=str(e), elapsed_ms=elapsed)
-
-
-# Load pipeline eagerly if configured (avoids cold-start latency on first request)
-if os.environ.get("EAGER_LOAD", "1") == "1":
-    get_pipeline()
